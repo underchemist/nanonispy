@@ -1,3 +1,3 @@
 # nanonispy
 
-A small library to parse Nanonis binary scan and grid data files. 
+A small library written in python 3 to parse Nanonis binary data files. 
