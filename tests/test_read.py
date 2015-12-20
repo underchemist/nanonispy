@@ -93,6 +93,15 @@ class TestNanonisFileBaseClass(unittest.TestCase):
 
         self.assertEquals(byte_offset, 26)
 
+    def test_no_header_tag_found(self):
+        with self.assertRaises(nap.read.FileHeaderNotFoundError):
+            f = tempfile.NamedTemporaryFile(mode='wb',
+                                            suffix='.3ds',
+                                            dir=self.temp_dir.name,
+                                            delete=False)
+            f.close()
+            NF = nap.read.NanonisFile(f.name)
+
 
 if __name__ == '__main__':
     unittest.main()
