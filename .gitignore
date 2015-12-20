@@ -56,3 +56,12 @@ docs/_build/
 # PyBuilder
 target/
 dev_test.py
+cover/coverage_html.js
+cover/jquery.debounce.min.js
+*.js
+cover/keybd_closed.png
+cover/index.html
+*.html
+cover/style.css
+*.json
+cover/keybd_open.png
