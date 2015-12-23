@@ -1,5 +1,8 @@
 import os
+import re
 import numpy as np
+
+_end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
 
 class NanonisFile:
     """
@@ -10,10 +13,6 @@ class NanonisFile:
         self.datadir, self.basename = os.path.split(fname)
         self.fname = fname
         self.filetype = self.determine_filetype()
-        self.end_tags = dict(grid=':HEADER_END:',
-                             scan='SCANIT_END',
-                             spec='[DATA]')
-
         self.byte_offset = self.start_byte()
         self.header_raw = self.read_raw_header(self.byte_offset)
 
@@ -51,7 +50,7 @@ class NanonisFile:
         directly after the end tag is found.
         """
         with open(self.fname, 'rb') as f:
-            tag = self.end_tags[self.filetype]
+            tag = _end_tags[self.filetype]
 
             # Set to a default value to know if end_tag wasn't found
             byte_offset = -1
@@ -71,10 +70,13 @@ class NanonisFile:
         return byte_offset
 
 class Grid(NanonisFile):
+
     def __init__(self, fname):
         super().__init__(fname)
         self.header = _parse_3ds_header(self.header_raw)
         self.signals = self._load_data()
+        self.signals['sweep_signal'] = self._derive_sweep_signal()
+        self.signals['topo'] = self._extract_topo()
 
     def _load_data(self):
         # load grid params
@@ -109,9 +111,23 @@ class Grid(NanonisFile):
 
         return data_dict
 
+    def _derive_sweep_signal(self):
+        name = self.header['sweep_signal']
+        # find sweep signal start and end from a given pixel value
+        sweep_start, sweep_end = self.signals['params'][0, 0, :2]
+        num_sweep_signal = self.header['num_sweep_signal']
+
+        return np.linspace(sweep_start, sweep_end, num_sweep_signal, dtype=np.float32)
+
+    def _extract_topo(self):
+        return self.signals['params'][:, :, 4]
+
 
 class Scan(NanonisFile):
-    pass
+
+    def __init__(self, fname):
+        super().__init__(fname)
+
 
 class Spec(NanonisFile):
     pass
@@ -205,6 +221,19 @@ def _parse_3ds_header(header_raw):
 
     return header_dict
 
+def _parse_sxm_header(header_raw):
+    """
+    Parse raw header string.
+
+    Empirically done based on Nanonis header structure. Details can be seen in
+    Nanonis help documentation.
+
+    Parameters
+    ----------
+    header_raw : str
+        Raw header string from read_raw_header() method.
+    """
+    pass
 
 def _split_header_entry(entry, multiple=False):
 
@@ -215,3 +244,10 @@ def _split_header_entry(entry, multiple=False):
         else:
             return val_str.strip('"')
 
+def _find_tag_values(self, header_raw, ind, tag_re=''):
+        vals = []
+        for val in header_raw[ind:]:
+            if re.match(tag_re, val):
+                break
+            vals.append(val)
+        return vals
