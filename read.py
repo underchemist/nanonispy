@@ -233,7 +233,10 @@ def _parse_sxm_header(header_raw):
     header_raw : str
         Raw header string from read_raw_header() method.
     """
-    pass
+    header_entries = header_raw.split('\n')
+    header_entries = header_entries[:-2]
+
+
 
 def _split_header_entry(entry, multiple=False):
 
@@ -244,10 +247,27 @@ def _split_header_entry(entry, multiple=False):
         else:
             return val_str.strip('"')
 
-def _find_tag_values(self, header_raw, ind, tag_re=''):
+def _find_tag_values(header_raw, ind, tag_re=''):
         vals = []
         for val in header_raw[ind:]:
             if re.match(tag_re, val):
                 break
             vals.append(val)
         return vals
+
+def _parse_scan_header_table(table_list):
+    table_processed = []
+    for row in table_list:
+        # strip leading \t, split by \t
+        table_processed.append(row.strip('\t').split('\t'))
+
+    # column names are first row
+    keys = table_processed[0]
+    values = table_processed[1:]
+
+    if values.count(['']) > 0:
+        values.pop()
+
+    zip_vals = zip(*values)
+
+    return dict(zip(keys, zip_vals))
