@@ -107,7 +107,6 @@ class Grid(NanonisFile):
             stop_ind = num_param + (i+1) * num_sweep
             data_dict[chann] = griddata_shaped[:, :, start_ind:stop_ind]
 
-
         return data_dict
 
 
@@ -118,7 +117,18 @@ class Spec(NanonisFile):
     pass
 
 class Signal:
-    pass
+
+    def __init__(self, name, data, unit):
+        self.name = name
+        self.data = data
+        self.unit = unit
+
+    def change_unit(self, fact, new_unit):
+        """
+        multiply data by conversion factor and update unit string.
+        """
+        self.data *= fact
+        self.unit = new_unit
 
 
 class UnhandledFileError(Exception):
