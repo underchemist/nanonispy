@@ -127,6 +127,40 @@ class Scan(NanonisFile):
 
     def __init__(self, fname):
         super().__init__(fname)
+        self.header = _parse_sxm_header(self.header_raw)
+
+        # data begins with 4 byte code, add 4 bytes to offset instead
+        self.byte_offset += 4
+
+        # load data
+        self.signals = self._load_data()
+
+    def _load_data(self):
+        channs = list(self.header['data_info']['Name'])
+        nchanns = len(channs)
+        nx, ny = self.header['scan_pixels']
+
+        # assume both directions for now
+        ndir = 2
+
+        data_dict = dict()
+
+        # open and seek to start of data
+        f = open(self.fname, 'rb')
+        f.seek(self.byte_offset)
+        data_format = '>f4'
+        scandata = np.fromfile(f, dtype=data_format)
+
+        # reshape
+        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+
+        # extract data for each channel
+        for i, chann in enumerate(channs):
+            chann_dict = dict(forward=scandata_shaped[i, 0, :, :],
+                              backward=scandata_shaped[i, 1, :, :])
+            data_dict[chann] = chann_dict
+
+        return data_dict
 
 
 class Spec(NanonisFile):
@@ -234,7 +268,41 @@ def _parse_sxm_header(header_raw):
         Raw header string from read_raw_header() method.
     """
     header_entries = header_raw.split('\n')
-    header_entries = header_entries[:-2]
+    header_entries = header_entries[:-3]
+
+    header_dict = dict()
+    entries_to_be_split = ['scan_offset',
+                           'scan_pixels',
+                           'scan_range',
+                           'scan_time']
+
+    entries_to_be_floated = ['acq_time',
+                             'bias',
+                             *entries_to_be_split]
+
+    for i, entry in enumerate(header_entries):
+        if entry == ':DATA_INFO:' or entry == ':Z-CONTROLLER:':
+            count = 1
+            for j in range(i+1, len(header_entries)):
+                if header_entries[j].startswith(':'):
+                    break
+                if header_entries[j][0] == '\t':
+                    count += 1
+            header_dict[entry.strip(':').lower()] = _parse_scan_header_table(header_entries[i+1:i+count])
+            continue
+        if entry.startswith(':'):
+            header_dict[entry.strip(':').lower()] = header_entries[i+1].strip()
+
+    for key in entries_to_be_split:
+        header_dict[key] = header_dict[key].split()
+
+    for key in entries_to_be_floated:
+        if isinstance(header_dict[key], list):
+            header_dict[key] = np.asarray(header_dict[key], dtype=np.float)
+        else:
+            header_dict[key] = np.float(header_dict[key])
+
+    return header_dict
 
 
 
@@ -247,13 +315,6 @@ def _split_header_entry(entry, multiple=False):
         else:
             return val_str.strip('"')
 
-def _find_tag_values(header_raw, ind, tag_re=''):
-        vals = []
-        for val in header_raw[ind:]:
-            if re.match(tag_re, val):
-                break
-            vals.append(val)
-        return vals
 
 def _parse_scan_header_table(table_list):
     table_processed = []
@@ -264,9 +325,6 @@ def _parse_scan_header_table(table_list):
     # column names are first row
     keys = table_processed[0]
     values = table_processed[1:]
-
-    if values.count(['']) > 0:
-        values.pop()
 
     zip_vals = zip(*values)
 
