@@ -150,6 +150,7 @@ class Scan(NanonisFile):
         f.seek(self.byte_offset)
         data_format = '>f4'
         scandata = np.fromfile(f, dtype=data_format)
+        f.close()
 
         # reshape
         scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
@@ -164,21 +165,25 @@ class Scan(NanonisFile):
 
 
 class Spec(NanonisFile):
-    pass
+    def __init__(self, fname):
+        super().__init__(fname)
+        self.header = _parse_dat_header(self.header_raw)
 
-class Signal:
+    def _load_data(self):
+        # done differently since data is ascii, not binary
+        f = open(self.fname, 'r')
+        f.seek(self.byte_offset)
+        data_dict = dict()
 
-    def __init__(self, name, data, unit):
-        self.name = name
-        self.data = data
-        self.unit = unit
+        column_names = f.readline().strip('\n').split('\t')
+        f.close()
+        header_lines = len(self.header) + 4
+        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=header_lines)
 
-    def change_unit(self, fact, new_unit):
-        """
-        multiply data by conversion factor and update unit string.
-        """
-        self.data *= fact
-        self.unit = new_unit
+        for i, name in enumerate(column_names):
+            data_dict[name] = specdata[:, i]
+
+        return data_dict
 
 
 class UnhandledFileError(Exception):
@@ -305,6 +310,15 @@ def _parse_sxm_header(header_raw):
     return header_dict
 
 
+def _parse_dat_header(header_raw):
+    header_entries = header_raw.split('\r\n')
+    header_entries = header_entries[:-3]
+    header_dict = dict()
+    for entry in header_entries:
+        key, val, _ = entry.split('\t')
+        header_dict[key] = val
+
+    return header_dict
 
 def _split_header_entry(entry, multiple=False):
 
