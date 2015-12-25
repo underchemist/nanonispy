@@ -12,11 +12,11 @@ class NanonisFile:
     def __init__(self, fname):
         self.datadir, self.basename = os.path.split(fname)
         self.fname = fname
-        self.filetype = self.determine_filetype()
+        self.filetype = self._determine_filetype()
         self.byte_offset = self.start_byte()
         self.header_raw = self.read_raw_header(self.byte_offset)
 
-    def determine_filetype(self):
+    def _determine_filetype(self):
         """
         Check last three characters for appropriate file extension,
         raise error if not.
@@ -72,6 +72,7 @@ class NanonisFile:
 class Grid(NanonisFile):
 
     def __init__(self, fname):
+        _is_valid_file(fname, ext='3ds')
         super().__init__(fname)
         self.header = _parse_3ds_header(self.header_raw)
         self.signals = self._load_data()
@@ -126,6 +127,7 @@ class Grid(NanonisFile):
 class Scan(NanonisFile):
 
     def __init__(self, fname):
+        _is_valid_file(fname, ext='sxm')
         super().__init__(fname)
         self.header = _parse_sxm_header(self.header_raw)
 
@@ -166,6 +168,7 @@ class Scan(NanonisFile):
 
 class Spec(NanonisFile):
     def __init__(self, fname):
+        _is_valid_file(fname, ext='dat')
         super().__init__(fname)
         self.header = _parse_dat_header(self.header_raw)
 
@@ -343,3 +346,7 @@ def _parse_scan_header_table(table_list):
     zip_vals = zip(*values)
 
     return dict(zip(keys, zip_vals))
+
+def _is_valid_file(fname, ext):
+    if fname[-3:] != ext:
+        raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
