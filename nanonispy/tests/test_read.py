@@ -123,19 +123,6 @@ class TestGridFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_header(self):
-        """
-        return tempfile file object with dummy header info
-        """
-        f = tempfile.NamedTemporaryFile(mode='wb',
-                                        suffix='.3ds',
-                                        dir=self.temp_dir.name,
-                                        delete=False)
-        f.write(b'Grid dim="230 x 230"\r\nGrid settings=4.026839E-8;-4.295725E-8;1.500000E-7;1.500000E-7;0.000000E+0\r\nSweep Signal="Bias (V)"\r\nFixed parameters="Sweep Start;Sweep End"\r\nExperiment parameters="X (m);Y (m);Z (m);Z offset (m);Settling time (s);Integration time (s);Z-Ctrl hold;Final Z (m)"\r\n# Parameters (4 byte)=10\r\nExperiment size (bytes)=2048\r\nPoints=512\r\nChannels="Input 3 (A)"\r\nDelay before measuring (s)=0.000000E+0\r\nExperiment="Grid Spectroscopy"\r\nStart time="21.10.2014 16:48:06"\r\nEnd time="23.10.2014 10:42:19"\r\nUser=\r\nComment=\r\n:HEADER_END:\r\n')
-        f.close()
-
-        return f
-
     def create_dummy_grid_data(self, suffix='3ds'):
         """
         return tempfile file object with dummy header info
