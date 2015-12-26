@@ -1,8 +1,8 @@
 import os
-import re
 import numpy as np
 
 _end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
+
 
 class NanonisFile:
     """
@@ -225,8 +225,6 @@ class Grid(NanonisFile):
         numpy.ndarray
             1d sweep signal, should be sample bias in most cases.
         """
-
-        name = self.header['sweep_signal']
         # find sweep signal start and end from a given pixel value
         sweep_start, sweep_end = self.signals['params'][0, 0, :2]
         num_sweep_signal = self.header['num_sweep_signal']
@@ -404,11 +402,13 @@ class UnhandledFileError(Exception):
     """
     pass
 
+
 class FileHeaderNotFoundError(Exception):
     """
     To be raised when no header information could be determined.
     """
     pass
+
 
 def _parse_3ds_header(header_raw):
     """
@@ -477,6 +477,7 @@ def _parse_3ds_header(header_raw):
 
     return header_dict
 
+
 def _parse_sxm_header(header_raw):
     """
     Parse raw header string.
@@ -504,10 +505,10 @@ def _parse_sxm_header(header_raw):
                            'scan_time']
 
     entries_to_be_floated = ['scan_offset',
-                           'scan_range',
-                           'scan_time',
-                           'bias',
-                           'acq_time']
+                             'scan_range',
+                             'scan_time',
+                             'bias',
+                             'acq_time']
 
     entries_to_be_inted = ['scan_pixels']
 
@@ -559,6 +560,7 @@ def _parse_dat_header(header_raw):
 
     return header_dict
 
+
 def _split_header_entry(entry, multiple=False):
     """
     Split 3ds header entries by '=' character. If multiple values split
@@ -591,9 +593,12 @@ def _parse_scan_header_table(table_list):
 
     return dict(zip(keys, zip_vals))
 
+
 def _is_valid_file(fname, ext):
     """
     Detect if invalid file is being initialized by class.
     """
     if fname[-3:] != ext:
         raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
+
+
