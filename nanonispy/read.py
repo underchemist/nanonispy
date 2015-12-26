@@ -502,8 +502,13 @@ def _parse_sxm_header(header_raw):
                            'scan_range',
                            'scan_time']
 
-    entries_to_be_floated = entries_to_be_split.copy()
-    entries_to_be_floated.extend(['acq_time', 'bias'])
+    entries_to_be_floated = ['scan_offset',
+                           'scan_range',
+                           'scan_time',
+                           'bias',
+                           'acq_time']
+
+    entries_to_be_inted = ['scan_pixels']
 
     for i, entry in enumerate(header_entries):
         if entry == ':DATA_INFO:' or entry == ':Z-CONTROLLER:':
@@ -526,6 +531,11 @@ def _parse_sxm_header(header_raw):
             header_dict[key] = np.asarray(header_dict[key], dtype=np.float)
         else:
             header_dict[key] = np.float(header_dict[key])
+    for key in entries_to_be_inted:
+        if isinstance(header_dict[key], list):
+            header_dict[key] = np.asarray(header_dict[key], dtype=np.int)
+        else:
+            header_dict[key] = np.int(header_dict[key])
 
     return header_dict
 

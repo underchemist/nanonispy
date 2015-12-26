@@ -53,7 +53,7 @@ class TestNanonisFileBaseClass(unittest.TestCase):
         f.write(b':HEADER_END:')
         f.close()
         NF = nap.read.NanonisFile(f.name)
-        self.assertEquals(NF.filetype, 'grid')
+        self.assertEqual(NF.filetype, 'grid')
 
     def test_sxm_suffix_parsed(self):
         """
@@ -66,7 +66,7 @@ class TestNanonisFileBaseClass(unittest.TestCase):
         f.write(b'SCANIT_END')
         f.close()
         NF = nap.read.NanonisFile(f.name)
-        self.assertEquals(NF.filetype, 'scan')
+        self.assertEqual(NF.filetype, 'scan')
 
     def test_dat_suffix_parsed(self):
         """
@@ -79,7 +79,7 @@ class TestNanonisFileBaseClass(unittest.TestCase):
         f.write(b'[DATA]')
         f.close()
         NF = nap.read.NanonisFile(f.name)
-        self.assertEquals(NF.filetype, 'spec')
+        self.assertEqual(NF.filetype, 'spec')
 
     def test_find_start_byte(self):
         f = tempfile.NamedTemporaryFile(mode='wb',
@@ -92,7 +92,7 @@ class TestNanonisFileBaseClass(unittest.TestCase):
         NF = nap.read.NanonisFile(f.name)
         byte_offset = NF.start_byte()
 
-        self.assertEquals(byte_offset, 26)
+        self.assertEqual(byte_offset, 26)
 
     def test_no_header_tag_found(self):
         with self.assertRaises(nap.read.FileHeaderNotFoundError):
@@ -165,13 +165,13 @@ class TestGridFile(unittest.TestCase):
         f = self.create_dummy_grid_data()
         GF = nap.read.Grid(f.name)
 
-        self.assertEquals(GF.signals['Input 3 (A)'].shape, (230, 230, 512))
+        self.assertEqual(GF.signals['Input 3 (A)'].shape, (230, 230, 512))
 
     def test_sweep_signal_calculated(self):
         f = self.create_dummy_grid_data()
         GF = nap.read.Grid(f.name)
 
-        self.assertEquals(GF.signals['sweep_signal'].shape, (512,))
+        self.assertEqual(GF.signals['sweep_signal'].shape, (512,))
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
@@ -253,7 +253,7 @@ class TestScanFile(unittest.TestCase):
                      'scan_dir': 'up',
                      'scan_file': 'C:\\STM data\\2014-11\\2014-11-21\\ScanAg111_November2014_001.sxm',
                      'scan_offset': '[  7.21767000e-08   2.41417500e-07]',
-                     'scan_pixels': '[ 64.  64.]',
+                     'scan_pixels': '[64 64]',
                      'scan_range': '[  1.50000000e-07   1.50000000e-07]',
                      'scan_time': '[ 3.533  3.533]',
                      'scanit_type': 'FLOAT            MSBFIRST',
@@ -279,6 +279,7 @@ class TestSpecFile(unittest.TestCase):
     def create_dummy_spec_data(self, suffix='dat'):
         base = os.path.dirname(__file__)
         f = open(base+'/Bias-Spectroscopy002.dat', 'rb')
+        f.close()
         return f
 
     def test_header_entries(self):
