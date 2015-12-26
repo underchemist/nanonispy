@@ -293,5 +293,22 @@ class TestSpecFile(unittest.TestCase):
             b = ''.join(sorted(test_dict[key]))
             self.assertEqual(a, b)
 
+
+class TestUtilFunctions(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_arr_roundtrip(self):
+        fname = self.temp_dir.name + '/test_roundtrip.npy'
+        a = np.linspace(0, 1.00, dtype='>f4')
+        nap.read.save_array(fname, a)
+        b = nap.read.load_array(fname)
+
+        np.testing.assert_array_equal(a, b)
+
 if __name__ == '__main__':
     unittest.main()

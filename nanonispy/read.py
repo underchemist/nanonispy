@@ -5,6 +5,7 @@ _end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
 
 
 class NanonisFile:
+
     """
     Base class for Nanonis data files (grid, scan, point spectroscopy).
 
@@ -23,6 +24,8 @@ class NanonisFile:
         Just the filename, no path.
     fname : str
         Full path of Nanonis file.
+    filetype : str
+        filetype corresponding to filename extension.
     byte_offset : int
         Size of header in bytes.
     header_raw : str
@@ -121,6 +124,7 @@ class NanonisFile:
         return byte_offset
 
 class Grid(NanonisFile):
+
     """
     Nanonis grid file class.
 
@@ -252,6 +256,7 @@ class Grid(NanonisFile):
 
 
 class Scan(NanonisFile):
+
     """
     Nanonis scan file class.
 
@@ -338,6 +343,7 @@ class Scan(NanonisFile):
 
 
 class Spec(NanonisFile):
+
     """
     Nanonis point spectroscopy file class.
 
@@ -397,6 +403,7 @@ class Spec(NanonisFile):
 
 
 class UnhandledFileError(Exception):
+
     """
     To be raised when unknown file extension is passed.
     """
@@ -404,6 +411,7 @@ class UnhandledFileError(Exception):
 
 
 class FileHeaderNotFoundError(Exception):
+
     """
     To be raised when no header information could be determined.
     """
@@ -575,6 +583,63 @@ def _split_header_entry(entry, multiple=False):
         return val_str.strip('"')
 
 
+def save_array(file, arr, allow_pickle=True):
+    """
+    Wrapper to numpy.save method for arrays.
+
+    The idea would be to use this to save a processed array for later
+    use in a matplotlib figure generation scripts. See numpy.save
+    documentation for details.
+
+    Parameters
+    ----------
+    file : file or str
+        File or filename to which the data is saved.  If file is a file-
+        object, then the filename is unchanged.  If file is a string, a
+        ``.npy`` extension will be appended to the file name if it does
+        not already have one.
+    arr : array_like
+        Array data to be saved.
+    allow_pickle : bool, optional
+        Allow saving object arrays using Python pickles. Reasons for
+        disallowing pickles include security (loading pickled data can
+        execute arbitrary code) and portability (pickled objects may not
+        be loadable on different Python installations, for example if
+        the stored objects require libraries that are not available, and
+        not all pickled data is compatible between Python 2 and Python
+        3). Default: True
+    """
+    np.save(file, arr, allow_pickle=allow_pickle)
+
+
+def load_array(file, allow_pickle=True):
+    """
+    Wrapper to numpy.load method for binary files.
+
+    See numpy.load documentation for more details.
+
+    Parameters
+    ----------
+    file : file or str
+        The file to read. File-like objects must support the
+    ``seek()`` and ``read()`` methods. Pickled files require that the
+    file-like object support the ``readline()`` method as well.
+    allow_pickle : bool, optional
+        Allow loading pickled object arrays stored in npy files. Reasons
+        for disallowing pickles include security, as loading pickled
+        data can execute arbitrary code. If pickles are disallowed,
+        loading object arrays will fail. Default: True
+
+    Returns
+    -------
+    result : array, tuple, dict, etc.
+        Data stored in the file. For ``.npz`` files, the returned
+        instance of NpzFile class must be closed to avoid leaking file
+        descriptors.
+    """
+    return np.load(file)
+
+
 def _parse_scan_header_table(table_list):
     """
     Parse scan file header entries whose values are tab-separated
@@ -600,5 +665,3 @@ def _is_valid_file(fname, ext):
     """
     if fname[-3:] != ext:
         raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
-
-
