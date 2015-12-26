@@ -1,4 +1,7 @@
-|Build Status| |Coverage Status| # nanonispy
+|Build Status| |Coverage Status| |Install with conda|
+
+nanonispy
+=========
 
 A small library written in python 3 to parse Nanonis binary and ascii
 files.
@@ -6,12 +9,14 @@ files.
 Requirements
 ------------
 
-Currently written and tested with - python 3.5 - python 3.4
+Currently written and tested with
+- python 3.5
+- python 3.4
+- python 3.3
 
-Depends on - numpy
+Depends on
+- numpy
 
-Will continue making tests that are actually useful and maybe will make
-this a conda/pip build.
 
 Install
 -------
@@ -42,8 +47,7 @@ Simply clone this repo and run
 Basic usage
 -----------
 
-Once installed, you should be able to import it to any python script or
-ipython session.
+Once installed, you should be able to import it to any python script or ipython session.
 
 .. code:: python
 
@@ -85,8 +89,6 @@ this) with
 
 .
 
-*I don't know how to turn tests without nose...*
-
 To do
 -----
 
@@ -94,8 +96,11 @@ To do
    pretty different and I'm to lazy to do it myself.
 -  more relevant tests
 -  saving methods
+-  handle incomplete scans/grids
 
 .. |Build Status| image:: https://travis-ci.org/underchemist/nanonispy.svg?branch=master
    :target: https://travis-ci.org/underchemist/nanonispy
 .. |Coverage Status| image:: https://coveralls.io/repos/underchemist/nanonispy/badge.svg?branch=master&service=github
    :target: https://coveralls.io/github/underchemist/nanonispy?branch=master
+.. |Install with conda| image:: https://anaconda.org/underchemist/nanonispy/badges/installer/conda.svg
+   :target: https://anaconda.org/underchemist/nanonispy/badges/installer/conda.svg
