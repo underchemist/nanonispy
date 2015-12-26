@@ -533,10 +533,7 @@ def _parse_sxm_header(header_raw):
         else:
             header_dict[key] = np.float(header_dict[key])
     for key in entries_to_be_inted:
-        if isinstance(header_dict[key], list):
-            header_dict[key] = np.asarray(header_dict[key], dtype=np.int)
-        else:
-            header_dict[key] = np.int(header_dict[key])
+        header_dict[key] = np.asarray(header_dict[key], dtype=np.int)
 
     return header_dict
 
