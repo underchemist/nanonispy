@@ -7,6 +7,26 @@ _end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
 class NanonisFile:
     """
     Base class for Nanonis data files (grid, scan, point spectroscopy).
+
+    Handles methods and parsing tasks common to all Nanonis files.
+
+    Parameters
+    ----------
+    fname : str
+        Name of Nanonis file.
+
+    Attributes
+    ----------
+    datadir : str
+        Directory path for Nanonis file.
+    basename : str
+        Just the filename, no path.
+    fname : str
+        Full path of Nanonis file.
+    byte_offset : int
+        Size of header in bytes.
+    header_raw : str
+        Unproccessed header information.
     """
 
     def __init__(self, fname):
@@ -20,6 +40,17 @@ class NanonisFile:
         """
         Check last three characters for appropriate file extension,
         raise error if not.
+
+        Returns
+        -------
+        str
+            Filetype name associated with extension.
+
+        Raises
+        ------
+        UnhandledFileError
+            If last three characters of filename are not one of '3ds',
+            'sxm', or 'dat'.
         """
 
         if self.fname[-3:] == '3ds':
@@ -37,7 +68,19 @@ class NanonisFile:
 
         Everything before the end tag is considered to be part of the header.
         the parsing will be done later by subclass methods.
+
+        Parameters
+        ----------
+        byte_offset : int
+            Size of header in bytes. Read up to this point in file.
+
+        Returns
+        -------
+        str
+            Contents of filename up to byte_offset as a decoded binary
+            string.
         """
+
         with open(self.fname, 'rb') as f:
             return f.read(byte_offset).decode()
 
@@ -47,8 +90,16 @@ class NanonisFile:
 
         Caveat, I believe this is the first byte after the end of the
         line that the end tag is found on, not strictly the first byte
-        directly after the end tag is found.
+        directly after the end tag is found. For example in Scan
+        __init__, byte_offset is incremented by 4 to account for a
+        'start' byte that is not actual data.
+
+        Returns
+        -------
+        int
+            Size of header in bytes.
         """
+
         with open(self.fname, 'rb') as f:
             tag = _end_tags[self.filetype]
 
@@ -70,6 +121,48 @@ class NanonisFile:
         return byte_offset
 
 class Grid(NanonisFile):
+    """
+    Nanonis grid file class.
+
+    Contains data loading method specific to Nanonis grid file. Nanonis
+    3ds files contain a header terminated by '\r\n:HEADER_END:\r\n'
+    line, after which big endian encoded binary data starts. A grid is
+    always recorded in an 'up' direction, and data is recorded
+    sequentially starting from the first pixel. The number of bytes
+    corresponding to a single pixel will depend on the experiment
+    parameters. In general the size of one pixel will be a sum of
+
+        - # fixed parameters
+        - # experimental parameters
+        - # sweep signal points (typically bias).
+
+    Hence if there are 2 fixed parameters, 8 experimental parameters,
+    and a 512 point bias sweep, a pixel will account 4 x (522) = 2088
+    bytes of data. The class intuits this from header info and extracts
+    the data for you and cuts it up into each channel, though normally
+    this should be just the current.
+
+    Currently cannot accept grids that are incomplete.
+
+    Parameters
+    ----------
+    fname : str
+        Filename for grid file.
+
+    Attributes
+    ----------
+    header : dict
+        Parsed 3ds header. Relevant fields are converted to float,
+        otherwise most are string values.
+    signals : dict
+        Dict keys correspond to channel name, with values being the
+        corresponding data array.
+
+    Raises
+    ------
+    UnhandledFileError
+        If fname does not have a '.3ds' extension.
+    """
 
     def __init__(self, fname):
         _is_valid_file(fname, ext='3ds')
@@ -80,6 +173,14 @@ class Grid(NanonisFile):
         self.signals['topo'] = self._extract_topo()
 
     def _load_data(self):
+        """
+        Read binary data for Nanonis 3ds file.
+
+        Returns
+        -------
+        dict
+            Channel name keyed dict of 3d array.
+        """
         # load grid params
         nx, ny = self.header['dim_px']
         num_sweep = self.header['num_sweep_signal']
@@ -113,6 +214,18 @@ class Grid(NanonisFile):
         return data_dict
 
     def _derive_sweep_signal(self):
+        """
+        Computer sweep signal.
+
+        Based on start and stop points of sweep signal in header, and
+        number of sweep signal points.
+
+        Returns
+        -------
+        numpy.ndarray
+            1d sweep signal, should be sample bias in most cases.
+        """
+
         name = self.header['sweep_signal']
         # find sweep signal start and end from a given pixel value
         sweep_start, sweep_end = self.signals['params'][0, 0, :2]
@@ -121,10 +234,62 @@ class Grid(NanonisFile):
         return np.linspace(sweep_start, sweep_end, num_sweep_signal, dtype=np.float32)
 
     def _extract_topo(self):
+        """
+        Extract topographic map based on z-controller height at each
+        pixel.
+
+        The data is already extracted, though it lives in the signals
+        dict under the key 'parameters'. Currently the 4th column is the
+        Z (m) information at each pixel, should update this to be more
+        general in case the fixed/experimental parameters are not the
+        same for other Nanonis users.
+
+        Returns
+        -------
+        numpy.ndarray
+            Copy of already extracted data to be more easily accessible
+            in signals dict.
+        """
         return self.signals['params'][:, :, 4]
 
 
 class Scan(NanonisFile):
+    """
+    Nanonis scan file class.
+
+    Contains data loading methods specific to Nanonis sxm files. The
+    header is terminated by a 'SCANIT_END' tag followed by the \1A\04
+    code. The NanonisFile header parse method doesn't account for this
+    so the Scan __init__ method just adds 4 bytes to the byte_offset
+    attribute so as to not include this as a datapoint.
+
+    Data is structured a little differently from grid files, obviously.
+    For each pixel in the scan, each channel is recorded forwards and
+    backwards one after the other.
+
+    Currently cannot take scans that do not have both directions
+    recorded for each channel, nor incomplete scans.
+
+    Parameters
+    ----------
+    fname : str
+        Filename for scan file.
+
+    Attributes
+    ----------
+    header : dict
+        Parsed sxm header. Some fields are converted to float,
+        otherwise most are string values.
+    signals : dict
+        Dict keys correspond to channel name, values correspond to
+        another dict whose keys are simply forward and backward arrays
+        for the scan image.
+
+    Raises
+    ------
+    UnhandledFileError
+        If fname does not have a '.sxm' extension.
+    """
 
     def __init__(self, fname):
         _is_valid_file(fname, ext='sxm')
@@ -138,6 +303,14 @@ class Scan(NanonisFile):
         self.signals = self._load_data()
 
     def _load_data(self):
+        """
+        Read binary data for Nanonis sxm file.
+
+        Returns
+        -------
+        dict
+            Channel name keyed dict of each channel array.
+        """
         channs = list(self.header['data_info']['Name'])
         nchanns = len(channs)
         nx, ny = self.header['scan_pixels']
@@ -167,12 +340,47 @@ class Scan(NanonisFile):
 
 
 class Spec(NanonisFile):
+    """
+    Nanonis point spectroscopy file class.
+
+    These files are a little easier to handle since they are stored in
+    ascii format. I won't go into details as it's pretty
+    straightforward.
+
+    Parameters
+    ----------
+    fname : str
+        Filename for spec file.
+
+    Attributes
+    ----------
+    header : dict
+        Parsed dat header.
+
+    Raises
+    ------
+    UnhandledFileError
+        If fname does not have a '.dat' extension.
+    """
+
     def __init__(self, fname):
         _is_valid_file(fname, ext='dat')
         super().__init__(fname)
         self.header = _parse_dat_header(self.header_raw)
 
     def _load_data(self):
+        """
+        Loads ascii formatted .dat file.
+
+        Header ended by '[DATA]' tag.
+
+        Returns
+        -------
+        dict
+            Keys correspond to each channel recorded, including
+            saved/filtered versions of other channels.
+        """
+
         # done differently since data is ascii, not binary
         f = open(self.fname, 'r')
         f.seek(self.byte_offset)
@@ -205,13 +413,18 @@ def _parse_3ds_header(header_raw):
     """
     Parse raw header string.
 
-    Empirically done based on Nanonis header structure. Details can be seen in
-    Nanonis help documentation.
+    Empirically done based on Nanonis header structure. See Grid
+    docstring or Nanonis help documentation for more details.
 
     Parameters
     ----------
     header_raw : str
         Raw header string from read_raw_header() method.
+
+    Returns
+    -------
+    dict
+        Channel name keyed dict of 3d array.
     """
     # cleanup string and remove end tag as entry
     header_entries = header_raw.split('\r\n')
@@ -267,13 +480,18 @@ def _parse_sxm_header(header_raw):
     """
     Parse raw header string.
 
-    Empirically done based on Nanonis header structure. Details can be seen in
-    Nanonis help documentation.
+    Empirically done based on Nanonis header structure. See Scan
+    docstring or Nanonis help documentation for more details.
 
     Parameters
     ----------
     header_raw : str
         Raw header string from read_raw_header() method.
+
+    Returns
+    -------
+    dict
+        Channel name keyed dict of each channel array.
     """
     header_entries = header_raw.split('\n')
     header_entries = header_entries[:-3]
@@ -314,6 +532,17 @@ def _parse_sxm_header(header_raw):
 
 
 def _parse_dat_header(header_raw):
+    """
+    Parse point spectroscopy header.
+
+    Each key-value pair is separated by '\t' characters. Values may be
+    further delimited by more '\t' characters.
+
+    Returns
+    -------
+    dict
+        Parsed point spectroscopy header.
+    """
     header_entries = header_raw.split('\r\n')
     header_entries = header_entries[:-3]
     header_dict = dict()
@@ -324,6 +553,10 @@ def _parse_dat_header(header_raw):
     return header_dict
 
 def _split_header_entry(entry, multiple=False):
+    """
+    Split 3ds header entries by '=' character. If multiple values split
+    those by ';' character.
+    """
 
         _, val_str = entry.split("=")
 
@@ -334,6 +567,10 @@ def _split_header_entry(entry, multiple=False):
 
 
 def _parse_scan_header_table(table_list):
+    """
+    Parse scan file header entries whose values are tab-separated
+    tables.
+    """
     table_processed = []
     for row in table_list:
         # strip leading \t, split by \t
@@ -348,5 +585,8 @@ def _parse_scan_header_table(table_list):
     return dict(zip(keys, zip_vals))
 
 def _is_valid_file(fname, ext):
+    """
+    Detect if invalid file is being initialized by class.
+    """
     if fname[-3:] != ext:
         raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
