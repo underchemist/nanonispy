@@ -502,9 +502,8 @@ def _parse_sxm_header(header_raw):
                            'scan_range',
                            'scan_time']
 
-    entries_to_be_floated = ['acq_time',
-                             'bias',
-                             *entries_to_be_split]
+    entries_to_be_floated = entries_to_be_split.copy()
+    entries_to_be_floated.extend(['acq_time', 'bias'])
 
     for i, entry in enumerate(header_entries):
         if entry == ':DATA_INFO:' or entry == ':Z-CONTROLLER:':
@@ -558,12 +557,12 @@ def _split_header_entry(entry, multiple=False):
     those by ';' character.
     """
 
-        _, val_str = entry.split("=")
+    _, val_str = entry.split("=")
 
-        if multiple:
-            return val_str.strip('"').split(';')
-        else:
-            return val_str.strip('"')
+    if multiple:
+        return val_str.strip('"').split(';')
+    else:
+        return val_str.strip('"')
 
 
 def _parse_scan_header_table(table_list):
