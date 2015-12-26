@@ -6,6 +6,7 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.md')) as f:
     long_description = f.read()
+version = '1.0'
 
 setup(
     name='nanonispy',
@@ -13,7 +14,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0',
+    version=version,
 
     description='Library to parse Nanonis files.',
     long_description=long_description,
@@ -22,7 +23,7 @@ setup(
     url='https://github.com/underchemist/nanonispy',
 
     # Download url
-    # download_url = 'https://github.com/underchemist/nanonispy/tarball/master',
+    download_url = 'https://github.com/underchemist/nanonispy/tarball/'+version,
 
     # Author details
     author='Yann-Sebastien Tremblay-Johnston',
