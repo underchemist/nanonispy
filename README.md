@@ -12,18 +12,18 @@ Will continue making tests that are actually useful and maybe will make this a c
 
 ## Install
 ### pip
-```bash
+```
 pip install nanonispy
 ```
 
 ### conda
-```bash
+```
 conda install --channel https://conda.anaconda.org/underchemist nanonispy
 ```
 
 ### github
 Simply clone this repo and run
-```bash
+```
 python setup.py install
 ```
 
@@ -45,18 +45,18 @@ You can look at the attributes and methods to determine the information availabl
 
 ## Running tests
 Similar to the install, except run
-```bash
+```
 python setup.py test
 ```
 .
 If you have the nose module installed, it's as simple as 
-```bash
+```
 nosetests
 ```
 .
 
 You can also see coverage of the tests as well as ignore the test discovery of numpy core packages (don't quite understand why it does this) with
-```bash
+```
 nosetests --with-coverage --cover-branches --cover-package=nanonispy
 ```
 .
