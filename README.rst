@@ -6,6 +6,10 @@ nanonispy
 A small library written in python 3 to parse Nanonis binary and ascii
 files.
 
+Nanonispy was made in needing to do a lot of analysis for scanning tunneling microscopy (STM) data, and thought this would be good practice in creating a proper python library. That being said it is in no way foolproof and if anybody else actually uses this please let me know if you run into issues.
+
+Nanonispy can read Nanonis grid, scan, and point spectroscopy files. This means it will read the file header and parse that into a somewhat useful dictionary for later use, as well as read in the binary/ascii data in a relatively general way to accomadate data with multiple channels stored, or custom spectroscopy experiments.
+
 Requirements
 ------------
 
