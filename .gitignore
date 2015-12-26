@@ -68,3 +68,6 @@ cover/keybd_open.png
 nanonispy.sublime-project
 nanonispy.sublime-workspace
 dev_test.py
+MANIFEST
+MANIFEST.in
+conda_build/

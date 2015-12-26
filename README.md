@@ -6,9 +6,12 @@ A small library written in python 3 to parse Nanonis binary and ascii files.
 
 ## Requirements
 
-Currently written and 'tested' with python 3.5, fairly sure this won't work with version of python < 3.0
+Currently written and tested with 
+- python 3.5
+- python 3.4
 
-- numpy (>1.10)
+Depends on 
+- numpy
 
 Will continue making tests that are actually useful and maybe will make this a conda/pip build.
 
@@ -67,4 +70,6 @@ nosetests --with-coverage --cover-branches --cover-package=nanonispy
 
 ## To do
 - homogenize grid and scan header keys, right now header formats are pretty different and I'm to lazy to do it myself.
+- more relevant tests
+- saving methods
 
