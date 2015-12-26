@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/underchemist/nanonispy.svg?branch=master)](https://travis-ci.org/underchemist/nanonispy)
 [![Coverage Status](https://coveralls.io/repos/underchemist/nanonispy/badge.svg?branch=master&service=github)](https://coveralls.io/github/underchemist/nanonispy?branch=master)
+[![Install with conda](https://anaconda.org/underchemist/nanonispy/badges/installer/conda.svg)](https://anaconda.org/underchemist/nanonispy/badges/installer/conda.svg)
 # nanonispy
 
 A small library written in python 3 to parse Nanonis binary and ascii files. 
