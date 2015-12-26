@@ -367,6 +367,7 @@ class Spec(NanonisFile):
         _is_valid_file(fname, ext='dat')
         super().__init__(fname)
         self.header = _parse_dat_header(self.header_raw)
+        self.signals = self._load_data()
 
     def _load_data(self):
         """
