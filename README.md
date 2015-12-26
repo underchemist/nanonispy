@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/underchemist/nanonispy.svg?branch=master)](https://travis-ci.org/underchemist/nanonispy)
+
 # nanonispy
 
 A small library written in python 3 to parse Nanonis binary and ascii files. 
