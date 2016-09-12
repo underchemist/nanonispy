@@ -569,6 +569,23 @@ def _parse_dat_header(header_raw):
     return header_dict
 
 
+def _clean_sxm_header(header_dict):
+    """
+    Cleanup header dicitonary key-value pairs.
+
+    Parameters
+    ----------
+    header_dict : dict
+        Should be dict returned from _parse_sxm_header method.
+
+    Returns
+    -------
+    clean_header_dict : dict
+        Cleaned header dictionary.
+    """
+    pass
+
+
 def _split_header_entry(entry, multiple=False):
     """
     Split 3ds header entries by '=' character. If multiple values split
