@@ -139,6 +139,22 @@ class TestGridFile(unittest.TestCase):
 
         return f
 
+    def create_dummy_grid_data_v2(self, suffix='3ds'):
+        """
+        return tempfile file object with dummy header info
+        """
+        f = tempfile.NamedTemporaryFile(mode='wb',
+                                        suffix=suffix,
+                                        dir=self.temp_dir.name,
+                                        delete=False)
+        f.write(b'Grid dim="230 x 230"\r\nGrid settings=4.026839E-8;-4.295725E-8;1.500000E-7;1.500000E-7;0.000000E+0\r\nFiletype=Linear\r\nSweep Signal="Bias (V)"\r\nFixed parameters="Sweep Start;Sweep End"\r\nExperiment parameters="X (m);Y (m);Z (m);Z offset (m);Settling time (s);Integration time (s);Z-Ctrl hold;Final Z (m)"\r\n# Parameters (4 byte)=10\r\nExperiment size (bytes)=2048\r\nPoints=512\r\nChannels="Input 3 (A)"\r\nDelay before measuring (s)=0.000000E+0\r\nExperiment="Grid Spectroscopy"\r\nStart time="21.10.2014 16:48:06"\r\nEnd time="23.10.2014 10:42:19"\r\nUser=\r\nComment=\r\n:HEADER_END:\r\n')
+        a = np.linspace(0, 100.0, 230*230*(10+512))
+        b = np.asarray(a, dtype='>f4')
+        b.tofile(f)
+        f.close()
+
+        return f
+
     def test_is_instance_grid_file(self):
         """
         Check for correct instance of Grid object.
@@ -191,6 +207,15 @@ class TestGridFile(unittest.TestCase):
             a = ''.join(sorted(str(GF.header[key])))
             b = ''.join(sorted(test_dict[key]))
             self.assertEqual(a, b)
+
+    def test_both_header_formats(self):
+        f = self.create_dummy_grid_data()
+        f2 = self.create_dummy_grid_data_v2()
+        GF = nap.read.Grid(f.name)
+        GF2 = nap.read.Grid(f2.name)
+
+        self.assertEqual(GF.header, GF2.header)
+
 
 class TestScanFile(unittest.TestCase):
     def setUp(self):

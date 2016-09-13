@@ -348,8 +348,7 @@ class Spec(NanonisFile):
     Nanonis point spectroscopy file class.
 
     These files are a little easier to handle since they are stored in
-    ascii format. I won't go into details as it's pretty
-    straightforward.
+    ascii format.
 
     Parameters
     ----------
@@ -438,6 +437,10 @@ def _parse_3ds_header(header_raw):
     # cleanup string and remove end tag as entry
     header_entries = header_raw.split('\r\n')
     header_entries = header_entries[:-2]
+
+    # software version 'generic 5' had an extra header entry
+    if header_entries[2] == 'Filetype=Linear':
+        header_entries.pop(2)
 
     header_dict = dict()
 
