@@ -24,12 +24,13 @@ def show_grid(arr, sweep_signal):
     s_energy_ind = Slider(ax_energy_ind, 'Energy index', emin, emax, valinit=default_energy_index)
 
     im = ax.imshow(arr[:, :, s_energy_ind.val])
+    s_energy_ind.valtext.set_text('{:.2f} mV'.format(sweep_signal[int(s_energy_ind.val)] * 1000))
 
     def update(val):
         im.set_data(arr[:, :, int(s_energy_ind.val)])
         im.autoscale()
 
-        s_energy_ind.valtext.set_text('{:.2f}'.format(sweep_signal[int(s_energy_ind.val)] * 1000))
+        s_energy_ind.valtext.set_text('{:.2f} mV'.format(sweep_signal[int(s_energy_ind.val)] * 1000))
 
     s_energy_ind.on_changed(update)
     plt.show()
