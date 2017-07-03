@@ -595,7 +595,7 @@ def _split_header_entry(entry, multiple=False):
     those by ';' character.
     """
 
-    _, val_str = entry.split("=")
+    _, val_str = entry.split("=", 1)
 
     if multiple:
         return val_str.strip('"').split(';')
