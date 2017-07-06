@@ -1,7 +1,3 @@
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
-import numpy as np
-
 def show_grid(arr, sweep_signal):
     """
     Plot 2 out of 3 dimensions of a Grid as an image with a slider to move along third dimension.
@@ -35,7 +31,10 @@ def show_grid(arr, sweep_signal):
     s_energy_ind : matplotlib.widgets.Slider
         Slider handle for slider widget
     """
-
+    import matplotlib.pyplot as plt
+    from matplotlib.widgets import Slider
+    import numpy as np
+    
     # starting + min/max values for slider
     default_energy_index = arr.shape[-1] // 2
     energy_min = 0
@@ -66,4 +65,22 @@ def show_grid(arr, sweep_signal):
 
     return fig, ax, s_ax, im, s_energy_ind
 
-def 
+def fft(arr, axes=[0, 1]):
+    """
+    Compute the 2d fft of an array. The fft is calculated across the first two (spatial)
+    dimensions, for each slice of energy. Applies a frequency shift to center low q vector
+    values in middle of array.
+
+    Parameters
+    ----------
+    arr : array_like
+        A 3d array consisting of (Ix, Iy, E) data. 
+    """
+    import numpy as np
+
+    # complex valued array of same shape as arr
+    fft_arr = np.fft.fft2(arr, axes=axes)
+
+    fft_shifted_arr = np.fft.fftshift(fft_arr, axes=axes)
+
+    return fft_shifted_arr
