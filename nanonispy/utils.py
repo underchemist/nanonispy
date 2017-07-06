@@ -6,6 +6,12 @@ def show_grid(arr, sweep_signal):
     """
     Plot 2 out of 3 dimensions of a Grid as an image with a slider to move along third dimension.
     Should be used with an interactive backend, only tested with qt5 backend so mileage my vary.
+
+    *warning*
+    Depending on the OS, because we are manipulating and handling large numpy arrays in memory 
+    python doesn't always properly free the memory, even if if you shut down your ipython kernel/script.
+    Hence you may need to keep an eye on your memory consumption and force quit the process if it
+    isn't freed after your analysis.
     
     Parameters
     ----------
@@ -29,7 +35,7 @@ def show_grid(arr, sweep_signal):
     s_energy_ind : matplotlib.widgets.Slider
         Slider handle for slider widget
     """
-    
+
     # starting + min/max values for slider
     default_energy_index = arr.shape[-1] // 2
     energy_min = 0
@@ -59,3 +65,5 @@ def show_grid(arr, sweep_signal):
     plt.show()
 
     return fig, ax, s_ax, im, s_energy_ind
+
+def 
