@@ -4,7 +4,8 @@ import numpy as np
 
 def show_grid(arr, sweep_signal):
     """
-    Plot 2 out of 3 dimensions of a Grid as an image with a slider to move along third dimension
+    Plot 2 out of 3 dimensions of a Grid as an image with a slider to move along third dimension.
+    Should be used with an interactive backend, only tested with qt5 backend so mileage my vary.
     
     Parameters
     ----------
@@ -17,8 +18,18 @@ def show_grid(arr, sweep_signal):
 
     Returns
     -------
-    ?
+    fig : matplotlib.figure.Figure
+        Figure handle.
+    ax : matplotlib.axes._subplots.AxesSubplot
+        Axes handle for image.
+    s_ax : matplotlib.axes._axes.Axes
+        Axes handle for slider widget.
+    im : matplotlib.image.AxesImage
+        Image handle.
+    s_energy_ind : matplotlib.widgets.Slider
+        Slider handle for slider widget
     """
+    
     # starting + min/max values for slider
     default_energy_index = arr.shape[-1] // 2
     energy_min = 0
@@ -30,13 +41,19 @@ def show_grid(arr, sweep_signal):
     s_energy_ind = Slider(s_ax, 'Energy', energy_min, energy_max, valinit=default_energy_index)
 
     im = ax.imshow(arr[:, :, int(s_energy_ind.val)])
-    s_energy_ind.valtext.set_text('{:.2f} mV'.format(sweep_signal[int(s_energy_ind.val)] * 1000))
+    s_energy_ind.valtext.set_text('{:.2f} mV\n{}/{} index'.format(
+        sweep_signal[int(s_energy_ind.val)] * 1000, 
+        int(s_energy_ind.val), 
+        arr.shape[-1]-1))
 
     def update(val):
         im.set_data(arr[:, :, int(s_energy_ind.val)])
         im.autoscale()
 
-        s_energy_ind.valtext.set_text('{:.2f} mV'.format(sweep_signal[int(s_energy_ind.val)] * 1000))
+        s_energy_ind.valtext.set_text('{:.2f} mV\n{}/{} index'.format(
+            sweep_signal[int(s_energy_ind.val)] * 1000, 
+            int(s_energy_ind.val), 
+            arr.shape[-1]-1))
 
     s_energy_ind.on_changed(update)
     plt.show()
