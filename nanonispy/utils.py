@@ -65,11 +65,18 @@ def show_grid(arr, sweep_signal):
 
     return fig, ax, s_ax, im, s_energy_ind
 
-def fft(arr, axes=[0, 1]):
+def fft(arr, axes=[0, 1], fftshift=True):
     """
     Compute the 2d fft of an array. The fft is calculated across the first two (spatial)
     dimensions, for each slice of energy. Applies a frequency shift to center low q vector
     values in middle of array.
+
+    *Note*
+    All the data parsed from the Nanonis 3ds files are float32 however the numpy fft function automatically
+    converts the input array to an array with dtype complex128. I have not seen how to avoid this at the moment
+    so be prepared for ~ 4x bigger memory usage. Of course you can just calculated the real part (via modulus)
+    and this will be a output option to be implemented, but it still means that the complex128 array will be 
+    created may cause out of memory exceptions if your system does not have a large amount of memory.
 
     Parameters
     ----------
@@ -81,6 +88,8 @@ def fft(arr, axes=[0, 1]):
     # complex valued array of same shape as arr
     fft_arr = np.fft.fft2(arr, axes=axes)
 
-    fft_shifted_arr = np.fft.fftshift(fft_arr, axes=axes)
+    # shift quadrants around to center low q vectors
+    if fftshift:
+        fft_arr = np.fft.fftshift(fft_arr, axes=axes)
 
-    return fft_shifted_arr
+    return fft_arr
