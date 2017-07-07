@@ -65,7 +65,7 @@ def show_grid(arr, sweep_signal):
 
     return fig, ax, s_ax, im, s_energy_ind
 
-def fft(arr, axes=[0, 1], fftshift=True):
+def fft(arr, axes=[0, 1], fftshift=True, ffttype=None):
     """
     Compute the 2d fft of an array. The fft is calculated across the first two (spatial)
     dimensions, for each slice of energy. Applies a frequency shift to center low q vector
@@ -81,7 +81,18 @@ def fft(arr, axes=[0, 1], fftshift=True):
     Parameters
     ----------
     arr : array_like
-        A 3d array consisting of (Ix, Iy, E) data. 
+        A 3d array consisting of (Ix, Iy, E) data.
+    axes : 2 item list, optional
+        A list of axes to compute fft along, should be of length 2.
+    fftshift : Bool, optional
+        If False the fourier transform output is not center shifted.
+    ffttype : {None, 'mod'}, optional
+        If None a complex128 array is returned, if 'mod' the modulus is returned
+
+    Returns
+    -------
+    fft_arr : array_like
+        The 2d fourier transform of arr.
     """
     import numpy as np
 
@@ -91,5 +102,11 @@ def fft(arr, axes=[0, 1], fftshift=True):
     # shift quadrants around to center low q vectors
     if fftshift:
         fft_arr = np.fft.fftshift(fft_arr, axes=axes)
+
+    if ffttype is not None:
+        if fftype == 'mod':
+            fft_arr = np.square(np.abs(fft_arr))
+        else:
+            raise ValueError("ffttype must be either None or 'mod'")
 
     return fft_arr
