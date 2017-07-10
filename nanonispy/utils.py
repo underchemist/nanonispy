@@ -104,7 +104,7 @@ def fft(arr, axes=[0, 1], fftshift=True, ffttype=None):
         fft_arr = np.fft.fftshift(fft_arr, axes=axes)
 
     if ffttype is not None:
-        if fftype == 'mod':
+        if ffttype == 'mod':
             fft_arr = np.square(np.abs(fft_arr))
         else:
             raise ValueError("ffttype must be either None or 'mod'")
