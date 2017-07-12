@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from . import _plot
 
 _end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
 
@@ -175,6 +176,7 @@ class Grid(NanonisFile):
         self.signals = self._load_data()
         self.signals['sweep_signal'] = self._derive_sweep_signal()
         self.signals['topo'] = self._extract_topo()
+        self.plot = _plot.Plotter(self)
 
     def _load_data(self):
         """
