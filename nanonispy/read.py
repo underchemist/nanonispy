@@ -111,7 +111,8 @@ class NanonisFile:
 
             for line in f:
                 # Convert from bytes to str
-                entry = line.strip().decode()
+                #entry = line.strip().decode()
+                entry = line.strip().decode('utf-8', 'ignore')
                 if tag in entry:
                     byte_offset = f.tell()
                     break
