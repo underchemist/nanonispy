@@ -332,7 +332,8 @@ class Scan(NanonisFile):
         f.close()
 
         # reshape
-        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+#        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+        scandata_shaped = scandata.reshape(nchanns, ndir, ny, nx)
 
         # extract data for each channel
         for i, chann in enumerate(channs):
