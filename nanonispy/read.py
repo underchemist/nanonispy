@@ -202,6 +202,11 @@ class Grid(NanonisFile):
 
         # pixel size in bytes
         exp_size_per_pix = num_param + num_sweep*num_chan
+        
+        ## pad griddata if incomplete
+        if len(griddata) < nx * ny * exp_size_per_pix:
+            paddiff = nx * ny * exp_size_per_pix - len(griddata)
+            griddata = np.pad(griddata, (0, paddiff), 'constant')
 
         # reshape from 1d to 3d
         griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
