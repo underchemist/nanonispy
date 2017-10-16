@@ -438,53 +438,62 @@ def _parse_3ds_header(header_raw):
     header_entries = header_raw.split('\r\n')
     header_entries = header_entries[:-2]
 
-    # software version 'generic 5' had an extra header entry
-    if header_entries[2] == 'Filetype=Linear':
-        header_entries.pop(2)
+    # Convert the strings to a dictionary.
+    raw_dict = dict()
+    for entry in header_entries:
+        key, val = _split_header_entry(entry)
+        raw_dict[key] = val
 
+    # Transfer parameters from raw_dict to header_dict
+    # Get the expected parameters first
     header_dict = dict()
 
     # grid dimensions in pixels
-    dim_px_str = _split_header_entry(header_entries[0])
+    dim_px_str = raw_dict.pop('Grid dim', '1 x 1')
     header_dict['dim_px'] = [int(val) for val in dim_px_str.split(' x ')]
 
     # grid frame center position, size, angle
-    grid_str = _split_header_entry(header_entries[1], multiple=True)
+    grid_str = raw_dict.pop('Grid settings', [0,0,0,0])
     header_dict['pos_xy'] = [float(val) for val in grid_str[:2]]
     header_dict['size_xy'] = [float(val) for val in grid_str[2:4]]
     header_dict['angle'] = float(grid_str[-1])
 
     # sweep signal
-    header_dict['sweep_signal'] = _split_header_entry(header_entries[2])
+    header_dict['sweep_signal'] = raw_dict.pop('Sweep Signal', 'Bias (V)')
 
     # fixed parameters
-    header_dict['fixed_parameters'] = _split_header_entry(header_entries[3], multiple=True)
+    header_dict['fixed_parameters'] = raw_dict.pop('Fixed parameters', [''])
 
     # experimental parameters
-    header_dict['experimental_parameters'] = _split_header_entry(header_entries[4], multiple=True)
+    header_dict['experimental_parameters'] = raw_dict.pop('Experiment parameters', [''])
 
     # number of parameters (each 4 bytes)
-    header_dict['num_parameters'] = int(_split_header_entry(header_entries[5]))
+    header_dict['num_parameters'] = int(raw_dict.pop('# Parameters (4 byte)',
+                                                     len(header_dict['fixed_parameters']) +
+                                                     len(header_dict['experimental_parameters'])))
 
     # experiment size in bytes
-    header_dict['experiment_size'] = int(_split_header_entry(header_entries[6]))
+    header_dict['experiment_size'] = int(raw_dict.pop('Experiment size (bytes)', header_dict['num_parameters'] * 2))
 
     # number of points of sweep signal
-    header_dict['num_sweep_signal'] = int(_split_header_entry(header_entries[7]))
+    header_dict['num_sweep_signal'] = int(raw_dict.pop('Points', 1))
 
     # channel names
-    header_dict['channels'] = _split_header_entry(header_entries[8], multiple=True)
+    header_dict['channels'] = raw_dict.pop('Channels', ['Input 1'])
     header_dict['num_channels'] = len(header_dict['channels'])
 
     # measure delay
-    header_dict['measure_delay'] = float(_split_header_entry(header_entries[9]))
+    header_dict['measure_delay'] = float(raw_dict.pop('Delay before measuring (s)', 0))
 
     # metadata
-    header_dict['experiment_name'] = _split_header_entry(header_entries[10])
-    header_dict['start_time'] = _split_header_entry(header_entries[11])
-    header_dict['end_time'] = _split_header_entry(header_entries[12])
-    header_dict['user'] = _split_header_entry(header_entries[13])
-    header_dict['comment'] = _split_header_entry(header_entries[14])
+    header_dict['experiment_name'] = raw_dict.pop('Experiment', 'Experiment')
+    header_dict['start_time'] = raw_dict.pop('Start time', '')
+    header_dict['end_time'] = raw_dict.pop('End time', '')
+    header_dict['user'] = raw_dict.pop('User', 'User')
+    header_dict['comment'] = raw_dict.pop('Comment', '')
+
+    # Add all remaining parameters to header_dict unchanged
+    header_dict.update(raw_dict)
 
     return header_dict
 
@@ -589,18 +598,18 @@ def _clean_sxm_header(header_dict):
     pass
 
 
-def _split_header_entry(entry, multiple=False):
+def _split_header_entry(entry):
     """
     Split 3ds header entries by '=' character. If multiple values split
     those by ';' character.
     """
 
-    _, val_str = entry.split("=", 1)
+    key_str, val_str = entry.split("=", 1)
 
-    if multiple:
-        return val_str.strip('"').split(';')
+    if ';' in val_str:
+        return key_str, (val_str.strip('"').split(';'))
     else:
-        return val_str.strip('"')
+        return key_str, val_str.strip('"')
 
 
 def save_array(file, arr, allow_pickle=True):
