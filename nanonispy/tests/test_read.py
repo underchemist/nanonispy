@@ -216,6 +216,26 @@ class TestGridFile(unittest.TestCase):
 
         self.assertEqual(GF.header, GF2.header)
 
+    def test_missing_header_raw_entry(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[22:]  # remove first entry
+        with self.assertRaises(KeyError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_missing_header_raw_value(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[:10] + T.header_raw[19:]
+        with self.assertRaises(ValueError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_header_override(self):
+        f = self.create_dummy_grid_data()
+        header_override = {'Sweep Signal': 'Not Bias (V)'}
+        GF = nap.read.Grid(f.name, header_override=header_override)
+        self.assertEqual(GF.header['sweep_signal'], header_override['Sweep Signal'])
+
 
 class TestScanFile(unittest.TestCase):
     def setUp(self):

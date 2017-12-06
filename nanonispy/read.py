@@ -152,6 +152,10 @@ class Grid(NanonisFile):
     ----------
     fname : str
         Filename for grid file.
+    header_override : dict, optional
+        A dict of key:value to override any corresponding key:value should
+        they be wrong or missing in your header. Keys in header_override must
+        match keys in Grid.header_raw.
 
     Attributes
     ----------
@@ -168,10 +172,10 @@ class Grid(NanonisFile):
         If fname does not have a '.3ds' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, header_override=None):
         _is_valid_file(fname, ext='3ds')
         super().__init__(fname)
-        self.header = _parse_3ds_header(self.header_raw)
+        self.header = _parse_3ds_header(self.header_raw, header_override=header_override)
         self.signals = self._load_data()
         self.signals['sweep_signal'] = self._derive_sweep_signal()
         self.signals['topo'] = self._extract_topo()
@@ -417,7 +421,7 @@ class FileHeaderNotFoundError(Exception):
     pass
 
 
-def _parse_3ds_header(header_raw):
+def _parse_3ds_header(header_raw, header_override):
     """
     Parse raw header string.
 
@@ -444,56 +448,71 @@ def _parse_3ds_header(header_raw):
         key, val = _split_header_entry(entry)
         raw_dict[key] = val
 
+    if header_override is not None:
+        for key, val in header_override.items():
+            raw_dict[key] = val  # creates new entry if key doesn't match key in raw_dict
+
     # Transfer parameters from raw_dict to header_dict
     # Get the expected parameters first
     header_dict = dict()
 
-    # grid dimensions in pixels
-    dim_px_str = raw_dict.pop('Grid dim', '1 x 1')
-    header_dict['dim_px'] = [int(val) for val in dim_px_str.split(' x ')]
+    try:
+        # grid dimensions in pixels
+        header_dict['dim_px'] = [int(val) for val in raw_dict['Grid dim'].split(' x ')]
 
-    # grid frame center position, size, angle
-    grid_str = raw_dict.pop('Grid settings', [0,0,0,0])
-    header_dict['pos_xy'] = [float(val) for val in grid_str[:2]]
-    header_dict['size_xy'] = [float(val) for val in grid_str[2:4]]
-    header_dict['angle'] = float(grid_str[-1])
+        # grid frame center position, size, angle. Assumes len(raw_dict['Grid settings']) = 4
+        header_dict['pos_xy'] = [float(val) for val in raw_dict['Grid settings'][:2]]
+        header_dict['size_xy'] = [float(val) for val in raw_dict['Grid settings'][2:4]]
+        header_dict['angle'] = float(raw_dict['Grid settings'][4])
 
-    # sweep signal
-    header_dict['sweep_signal'] = raw_dict.pop('Sweep Signal', 'Bias (V)')
+        # sweep signal
+        header_dict['sweep_signal'] = raw_dict['Sweep Signal']
 
-    # fixed parameters
-    header_dict['fixed_parameters'] = raw_dict.pop('Fixed parameters', [''])
+        # fixed parameters
+        header_dict['fixed_parameters'] = raw_dict['Fixed parameters']
 
-    # experimental parameters
-    header_dict['experimental_parameters'] = raw_dict.pop('Experiment parameters', [''])
+        # experimental parameters
+        header_dict['experimental_parameters'] = raw_dict['Experiment parameters']
 
-    # number of parameters (each 4 bytes)
-    header_dict['num_parameters'] = int(raw_dict.pop('# Parameters (4 byte)',
-                                                     len(header_dict['fixed_parameters']) +
-                                                     len(header_dict['experimental_parameters'])))
+        # number of parameters (each 4 bytes)
+        header_dict['num_parameters'] = int(raw_dict['# Parameters (4 byte)'])
 
-    # experiment size in bytes
-    header_dict['experiment_size'] = int(raw_dict.pop('Experiment size (bytes)', header_dict['num_parameters'] * 2))
+        # experiment size in bytes
+        header_dict['experiment_size'] = int(raw_dict['Experiment size (bytes)'])
 
-    # number of points of sweep signal
-    header_dict['num_sweep_signal'] = int(raw_dict.pop('Points', 1))
+        # number of points of sweep signal
+        header_dict['num_sweep_signal'] = int(raw_dict['Points'])
 
-    # channel names
-    header_dict['channels'] = raw_dict.pop('Channels', ['Input 1'])
-    header_dict['num_channels'] = len(header_dict['channels'])
+        # channel names
+        header_dict['channels'] = raw_dict['Channels']
+        if type(header_dict['channels']) == str:
+            # will be str if only one channel, make list of str so number of channels can be counted properly
+            l = []
+            l.append(header_dict['channels'])
+            header_dict['channels'] = l
+        header_dict['num_channels'] = len(header_dict['channels'])
 
-    # measure delay
-    header_dict['measure_delay'] = float(raw_dict.pop('Delay before measuring (s)', 0))
+        # measure delay
+        header_dict['measure_delay'] = float(raw_dict['Delay before measuring (s)'])
 
-    # metadata
-    header_dict['experiment_name'] = raw_dict.pop('Experiment', 'Experiment')
-    header_dict['start_time'] = raw_dict.pop('Start time', '')
-    header_dict['end_time'] = raw_dict.pop('End time', '')
-    header_dict['user'] = raw_dict.pop('User', 'User')
-    header_dict['comment'] = raw_dict.pop('Comment', '')
+        # metadata
+        header_dict['experiment_name'] = raw_dict['Experiment']
+        header_dict['start_time'] = raw_dict['Start time']
+        header_dict['end_time'] = raw_dict['End time']
+        header_dict['user'] = raw_dict['User']
+        header_dict['comment'] = raw_dict['Comment']
 
-    # Add all remaining parameters to header_dict unchanged
-    header_dict.update(raw_dict)
+    except (KeyError, ValueError) as e:
+        msg = ' You can edit your header file or provide an override value in header_override'
+
+        # guide user to using override dict
+        if isinstance(e, KeyError):
+            raise KeyError('[{key}] is missing from header.'.format(key=e.args[0]) + msg)
+        elif isinstance(e, ValueError):
+            print(e.args)
+            raise ValueError('Unexpected value found in header.' + msg)
+        else:
+            raise
 
     return header_dict
 
