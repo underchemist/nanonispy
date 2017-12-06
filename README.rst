@@ -18,7 +18,8 @@ Currently written and tested with
 - python 3.6
 - python 3.5
 - python 3.4
-~~-python 3.3~~ dropping support for this due to matplotlib no longer supporting 3.3
+
+*dropping support for python3.3 due to matplotlib no longer supporting*
 
 Depends on
 
