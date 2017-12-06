@@ -96,14 +96,6 @@ this) with
 
 .
 
-To do
------
-
--  homogenize grid and scan header keys, right now header formats are
-   pretty different and I'm to lazy to do it myself.
--  more relevant tests
--  saving methods
--  handle incomplete scans/grids
 
 .. |Build Status| image:: https://travis-ci.org/underchemist/nanonispy.svg?branch=master
    :target: https://travis-ci.org/underchemist/nanonispy
