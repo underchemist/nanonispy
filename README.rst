@@ -19,7 +19,7 @@ Currently written and tested with
 - python 3.5
 - python 3.4
 
-*dropping support for python3.3 due to matplotlib no longer supporting*
+**dropping support for python 3.3 due to matplotlib no longer supporting it**
 
 Depends on
 
@@ -28,6 +28,7 @@ Depends on
 
 Install
 -------
+For the most up-to-date version, install from github as pip and conda packages are not updated as frequently.
 
 pip
 ~~~
