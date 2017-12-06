@@ -1,12 +1,12 @@
 language: python
 python:
-  - "3.3"
   - "3.4"
   - "3.5"
-install: 
+  - "3.6"
+install:
   - pip install python-coveralls
   - pip install -r requirements.txt
-script: 
+script:
   - python setup.py install
   - nosetests --with-coverage --cover-branches --cover-package=nanonispy
 after_success: coveralls
