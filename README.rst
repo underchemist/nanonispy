@@ -15,6 +15,7 @@ Requirements
 
 Currently written and tested with
 
+- python 3.6
 - python 3.5
 - python 3.4
 - python 3.3

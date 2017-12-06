@@ -24,10 +24,12 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Physics',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5'
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6'
     ],
-    keywords='data science numpy binary file parse',
+    keywords='science numpy parse library',
     packages=['nanonispy', 'nanonispy.tests'],
     package_data={'nanonispy': ['LICENSE', 'README.md'], },
     install_requires=['numpy', ],
