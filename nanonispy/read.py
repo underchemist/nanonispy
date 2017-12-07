@@ -19,18 +19,21 @@ class NanonisFile:
 
     Attributes
     ----------
+    byte_offset : int
+        Size of header in bytes.
+    filetype : str
+        filetype corresponding to filename extension.
+    fname : str
+        Full path of Nanonis file.
+    header_raw : str
+        Unproccessed header information.
+
+    Deleted Attributes
+    ------------------
     datadir : str
         Directory path for Nanonis file.
     basename : str
         Just the filename, no path.
-    fname : str
-        Full path of Nanonis file.
-    filetype : str
-        filetype corresponding to filename extension.
-    byte_offset : int
-        Size of header in bytes.
-    header_raw : str
-        Unproccessed header information.
     """
 
     def __init__(self, fname):
@@ -604,6 +607,18 @@ def _split_header_entry(entry, multiple=False):
     """
     Split 3ds header entries by '=' character. If multiple values split
     those by ';' character.
+
+    Parameters
+    ----------
+    entry : str
+        A single line entry from a Nanonis raw header.
+    multiple : bool, optional
+        If True, uses ';' to split mutiple values.
+
+    Returns
+    -------
+    str or list
+        Parsed value of raw header entry line.
     """
 
     _, val_str = entry.split("=", 1)
@@ -653,8 +668,8 @@ def load_array(file, allow_pickle=True):
     ----------
     file : file or str
         The file to read. File-like objects must support the
-    ``seek()`` and ``read()`` methods. Pickled files require that the
-    file-like object support the ``readline()`` method as well.
+        ``seek()`` and ``read()`` methods. Pickled files require that the
+        file-like object support the ``readline()`` method as well.
     allow_pickle : bool, optional
         Allow loading pickled object arrays stored in npy files. Reasons
         for disallowing pickles include security, as loading pickled
@@ -675,6 +690,16 @@ def _parse_scan_header_table(table_list):
     """
     Parse scan file header entries whose values are tab-separated
     tables.
+
+    Parameters
+    ----------
+    table_list : TYPE
+        Description
+
+    Returns
+    -------
+    TYPE
+        Description
     """
     table_processed = []
     for row in table_list:
@@ -693,6 +718,17 @@ def _parse_scan_header_table(table_list):
 def _is_valid_file(fname, ext):
     """
     Detect if invalid file is being initialized by class.
+
+    Parameters
+    ----------
+    fname : str
+        Filename, including extension
+    ext : str
+        The extension of a valid filename
+
+    Raises
+    ------
+    UnhandledFileError
     """
     if fname[-3:] != ext:
         raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
