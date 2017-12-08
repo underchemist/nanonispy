@@ -15,9 +15,11 @@ Requirements
 
 Currently written and tested with
 
+- python 3.6
 - python 3.5
 - python 3.4
-- python 3.3
+
+**dropping support for python 3.3 due to matplotlib no longer supporting it**
 
 Depends on
 
@@ -26,6 +28,7 @@ Depends on
 
 Install
 -------
+For the most up-to-date version, install from github as pip and conda packages are not updated as frequently.
 
 pip
 ~~~
@@ -95,14 +98,6 @@ this) with
 
 .
 
-To do
------
-
--  homogenize grid and scan header keys, right now header formats are
-   pretty different and I'm to lazy to do it myself.
--  more relevant tests
--  saving methods
--  handle incomplete scans/grids
 
 .. |Build Status| image:: https://travis-ci.org/underchemist/nanonispy.svg?branch=master
    :target: https://travis-ci.org/underchemist/nanonispy

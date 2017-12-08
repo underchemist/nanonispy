@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import warnings
 
 _end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
 
@@ -85,7 +86,7 @@ class NanonisFile:
         """
 
         with open(self.fname, 'rb') as f:
-            return f.read(byte_offset).decode()
+            return f.read(byte_offset).decode('utf-8', errors='replace')
 
     def start_byte(self):
         """
@@ -111,8 +112,16 @@ class NanonisFile:
 
             for line in f:
                 # Convert from bytes to str
+<<<<<<< HEAD
                 #entry = line.strip().decode()
                 entry = line.strip().decode('utf-8', 'ignore')
+=======
+                try:
+                    entry = line.strip().decode()
+                except UnicodeDecodeError:
+                    warnings.warn('{} has non-uft-8 characters, replacing them.'.format(f.name))
+                    entry = line.strip().decode('utf-8', errors='replace')
+>>>>>>> 7b46ed8275fca8669eb031c755206fa0ed33608d
                 if tag in entry:
                     byte_offset = f.tell()
                     break
@@ -573,7 +582,13 @@ def _parse_dat_header(header_raw):
     header_entries = header_entries[:-3]
     header_dict = dict()
     for entry in header_entries:
-        key, val, _ = entry.split('\t')
+        # homogenize output of .dat files with \t delimit at end of every key
+        if entry[-1] == '\t':
+            entry = entry[:-1]
+        if '\t' not in entry:
+            entry += '\t'
+
+        key, val = entry.split('\t')
         header_dict[key] = val
 
     return header_dict

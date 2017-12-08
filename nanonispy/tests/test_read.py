@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import os
 import numpy as np
+import warnings
 
 import nanonispy as nap
 
@@ -113,6 +114,25 @@ class TestNanonisFileBaseClass(unittest.TestCase):
 
         NF = nap.read.NanonisFile(f.name)
         self.assertIsInstance(NF.header_raw, str)
+
+    def test_non_utf8_in_header(self):
+        warnings.filterwarnings('ignore')
+        string = b'This is a test \xec'
+        end_tag = b':HEADER_END:'
+        expected_result = 'This is a test ' +\
+            b'\xef\xbf\xbd'.decode('utf-8') +\
+            ':HEADER_END:'
+        f = tempfile.NamedTemporaryFile(mode='wb',
+                                        suffix='.3ds',
+                                        dir=self.temp_dir.name,
+                                        delete=False)
+        f.write(string)
+        f.write(end_tag)
+        f.close()
+
+        NF = nap.read.NanonisFile(f.name)
+
+        self.assertEqual(expected_result, NF.header_raw)
 
 
 class TestGridFile(unittest.TestCase):
@@ -318,6 +338,15 @@ class TestSpecFile(unittest.TestCase):
             b = ''.join(sorted(test_dict[key]))
             self.assertEqual(a, b)
 
+    def test_dat_header_extra_delimiter(self):
+        entry = 'entry1\t\t\r\n\r\n[DATA]\r\n'
+        expected_result = {'entry1': ''}
+        self.assertEqual(nap.read._parse_dat_header(entry), expected_result)
+
+    def test_dat_header_empty_value(self):
+        entry = 'entry1\r\n\r\n[DATA]\r\n'
+        expected_result = {'entry1': ''}
+        self.assertEqual(nap.read._parse_dat_header(entry), expected_result)
 
 class TestUtilFunctions(unittest.TestCase):
 
