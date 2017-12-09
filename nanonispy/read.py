@@ -459,29 +459,37 @@ def _parse_3ds_header(header_raw, header_override):
     try:
         # grid dimensions in pixels
         header_dict['dim_px'] = [int(val) for val in raw_dict['Grid dim'].split(' x ')]
+        raw_dict.pop('Grid dim')
 
         # grid frame center position, size, angle. Assumes len(raw_dict['Grid settings']) = 4
         header_dict['pos_xy'] = [float(val) for val in raw_dict['Grid settings'][:2]]
         header_dict['size_xy'] = [float(val) for val in raw_dict['Grid settings'][2:4]]
         header_dict['angle'] = float(raw_dict['Grid settings'][4])
+        raw_dict.pop('Grid settings')
 
         # sweep signal
         header_dict['sweep_signal'] = raw_dict['Sweep Signal']
+        raw_dict.pop('Sweep Signal')
 
         # fixed parameters
         header_dict['fixed_parameters'] = raw_dict['Fixed parameters']
+        raw_dict.pop('Fixed parameters')
 
         # experimental parameters
         header_dict['experimental_parameters'] = raw_dict['Experiment parameters']
+        raw_dict.pop('Experiment parameters')
 
         # number of parameters (each 4 bytes)
         header_dict['num_parameters'] = int(raw_dict['# Parameters (4 byte)'])
+        raw_dict.pop('# Parameters (4 byte)')
 
         # experiment size in bytes
         header_dict['experiment_size'] = int(raw_dict['Experiment size (bytes)'])
+        raw_dict.pop('Experiment size (bytes)')
 
         # number of points of sweep signal
         header_dict['num_sweep_signal'] = int(raw_dict['Points'])
+        raw_dict.pop('Points')
 
         # channel names
         header_dict['channels'] = raw_dict['Channels']
@@ -491,9 +499,11 @@ def _parse_3ds_header(header_raw, header_override):
             l.append(header_dict['channels'])
             header_dict['channels'] = l
         header_dict['num_channels'] = len(header_dict['channels'])
+        raw_dict.pop('Channels')
 
         # measure delay
         header_dict['measure_delay'] = float(raw_dict['Delay before measuring (s)'])
+        raw_dict.pop('Delay before measuring (s)')
 
         # metadata
         header_dict['experiment_name'] = raw_dict['Experiment']
@@ -501,6 +511,11 @@ def _parse_3ds_header(header_raw, header_override):
         header_dict['end_time'] = raw_dict['End time']
         header_dict['user'] = raw_dict['User']
         header_dict['comment'] = raw_dict['Comment']
+        raw_dict.pop('Experiment')
+        raw_dict.pop('Start time')
+        raw_dict.pop('End time')
+        raw_dict.pop('User')
+        raw_dict.pop('Comment')
 
     except (KeyError, ValueError) as e:
         msg = ' You can edit your header file or provide an override value in header_override'
@@ -513,6 +528,10 @@ def _parse_3ds_header(header_raw, header_override):
             raise ValueError('Unexpected value found in header.' + msg)
         else:
             raise
+
+    # fold remaining header entries into dict
+    for key, val in raw_dict.items():
+        header_dict[key] = val
 
     return header_dict
 
