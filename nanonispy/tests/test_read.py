@@ -228,13 +228,34 @@ class TestGridFile(unittest.TestCase):
             b = ''.join(sorted(test_dict[key]))
             self.assertEqual(a, b)
 
-    def test_both_header_formats(self):
+    def test_extra_entry_in_header(self):
         f = self.create_dummy_grid_data()
         f2 = self.create_dummy_grid_data_v2()
         GF = nap.read.Grid(f.name)
         GF2 = nap.read.Grid(f2.name)
 
-        self.assertEqual(GF.header, GF2.header)
+        diff = GF2.header.keys() - GF.header.keys()
+        self.assertIn('Filetype', diff)
+
+    def test_missing_header_raw_entry(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[22:]  # remove first entry
+        with self.assertRaises(KeyError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_missing_header_raw_value(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[:10] + T.header_raw[19:]
+        with self.assertRaises(ValueError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_header_override(self):
+        f = self.create_dummy_grid_data()
+        header_override = {'Sweep Signal': 'Not Bias (V)'}
+        GF = nap.read.Grid(f.name, header_override=header_override)
+        self.assertEqual(GF.header['sweep_signal'], header_override['Sweep Signal'])
 
 
 class TestScanFile(unittest.TestCase):
