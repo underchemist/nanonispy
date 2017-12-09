@@ -112,6 +112,9 @@ class NanonisFile:
 
             for line in f:
                 # Convert from bytes to str
+                #entry = line.strip().decode()
+                entry = line.strip().decode('utf-8', 'ignore')
+
                 try:
                     entry = line.strip().decode()
                 except UnicodeDecodeError:
@@ -210,6 +213,11 @@ class Grid(NanonisFile):
 
         # pixel size in bytes
         exp_size_per_pix = num_param + num_sweep*num_chan
+        
+        ## pad griddata if incomplete
+        if len(griddata) < nx * ny * exp_size_per_pix:
+            paddiff = nx * ny * exp_size_per_pix - len(griddata)
+            griddata = np.pad(griddata, (0, paddiff), 'constant')
 
         # reshape from 1d to 3d
         griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
@@ -340,7 +348,8 @@ class Scan(NanonisFile):
         f.close()
 
         # reshape
-        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+#        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+        scandata_shaped = scandata.reshape(nchanns, ndir, ny, nx)
 
         # extract data for each channel
         for i, chann in enumerate(channs):
