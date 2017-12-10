@@ -322,6 +322,20 @@ class TestScanFile(unittest.TestCase):
             f = self.create_dummy_scan_data(suffix='.3ds')
             SF = nap.read.Scan(f.name)
 
+    def test_rectangular_input(self):
+        f = tempfile.NamedTemporaryFile(mode='wb',
+                                        suffix='.sxm',
+                                        dir=self.temp_dir.name,
+                                        delete=False)
+        f.write(b':NANONIS_VERSION:\n2\n:SCANIT_TYPE:\n              FLOAT            MSBFIRST\n:REC_DATE:\n 21.11.2014\n:REC_TIME:\n17:19:32\n:REC_TEMP:\n      290.0000000000\n:ACQ_TIME:\n       470.3\n:SCAN_PIXELS:\n       128       64\n:SCAN_FILE:\nC:\\STM data\\2014-11\\2014-11-21\\ScanAg111_November2014_001.sxm\n:SCAN_TIME:\n             3.533E+0             3.533E+0\n:SCAN_RANGE:\n           1.500000E-7           1.500000E-7\n:SCAN_OFFSET:\n             7.217670E-8         2.414175E-7\n:SCAN_ANGLE:\n            0.000E+0\n:SCAN_DIR:\nup\n:BIAS:\n            -5.000E-2\n:Z-CONTROLLER:\n\tName\ton\tSetpoint\tP-gain\tI-gain\tT-const\n\tCurrent #3\t1\t1.000E-10 A\t7.000E-12 m\t3.500E-9 m/s\t2.000E-3 s\n:COMMENT:\n\n:NanonisMain>Session Path:\nC:\\STM data\\2014-11\\2014-11-21\n:NanonisMain>SW Version:\nGeneric 4\n:NanonisMain>UI Release:\n3180\n:NanonisMain>RT Release:\n3130\n:NanonisMain>RT Frequency (Hz):\n5E+3\n:NanonisMain>Signals Oversampling:\n10\n:NanonisMain>Animations Period (s):\n20E-3\n:NanonisMain>Indicators Period (s):\n300E-3\n:NanonisMain>Measurements Period (s):\n500E-3\n:DATA_INFO:\n\tChannel\tName\tUnit\tDirection\tCalibration\tOffset\n\t14\tZ\tm\tboth\t-3.480E-9\t0.000E+0\n\t2\tInput_3\tA\tboth\t1.000E-9\t0.000E+0\n\t20\tLIX_1_omega\tA\tboth\t1.000E+0\t0.000E+0\n\t21\tLIY_1_omega\tA\tboth\t1.000E+0\t0.000E+0\n\n:SCANIT_END:\n')
+        a = np.linspace(0, 100.0, 1+4*2*128*64)
+        b = np.asarray(a, dtype='>f4')
+        b.tofile(f)
+
+        SF = nap.read.Scan(f.name)
+        f.close()
+        self.assertEqual(SF.signals['Input_3']['forward'].shape, (128, 64))
+
 class TestSpecFile(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()

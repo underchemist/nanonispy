@@ -213,14 +213,14 @@ class Grid(NanonisFile):
 
         # pixel size in bytes
         exp_size_per_pix = num_param + num_sweep*num_chan
-        
-        ## pad griddata if incomplete
+
+        # pad griddata if incomplete
         if len(griddata) < nx * ny * exp_size_per_pix:
             paddiff = nx * ny * exp_size_per_pix - len(griddata)
             griddata = np.pad(griddata, (0, paddiff), 'constant')
 
         # reshape from 1d to 3d
-        griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
+        griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix), order='F')
 
         # experimental parameters are first num_param of every pixel
         params = griddata_shaped[:, :, :num_param]
@@ -349,7 +349,7 @@ class Scan(NanonisFile):
 
         # reshape
 #        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
-        scandata_shaped = scandata.reshape(nchanns, ndir, ny, nx)
+        scandata_shaped = scandata.reshape((nchanns, ndir, nx, ny))
 
         # extract data for each channel
         for i, chann in enumerate(channs):
