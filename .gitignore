@@ -70,3 +70,4 @@ nanonispy.sublime-workspace
 dev_test.py
 conda_build/
 boiler.py
+*.ipynb

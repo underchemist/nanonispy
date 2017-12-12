@@ -220,7 +220,7 @@ class Grid(NanonisFile):
             griddata = np.pad(griddata, (0, paddiff), 'constant')
 
         # reshape from 1d to 3d
-        griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix), order='F')
+        griddata_shaped = griddata.reshape((ny, nx, exp_size_per_pix))
 
         # experimental parameters are first num_param of every pixel
         params = griddata_shaped[:, :, :num_param]
@@ -347,9 +347,8 @@ class Scan(NanonisFile):
         scandata = np.fromfile(f, dtype=data_format)
         f.close()
 
-        # reshape
-#        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
-        scandata_shaped = scandata.reshape((nchanns, ndir, nx, ny))
+        # reshape (reverse expected x-y pixels to make array correspond to orientation viewed in nananis scan inspector)
+        scandata_shaped = scandata.reshape((nchanns, ndir, ny, nx))
 
         # extract data for each channel
         for i, chann in enumerate(channs):
