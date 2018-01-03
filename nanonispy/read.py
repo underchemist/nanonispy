@@ -216,7 +216,8 @@ class Grid(NanonisFile):
             griddata = np.pad(griddata, (0, paddiff), 'constant')
 
         # reshape from 1d to 3d
-        griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
+        # griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
+        griddata_shaped = griddata.reshape((ny, nx, exp_size_per_pix))
 
         # experimental parameters are first num_param of every pixel
         params = griddata_shaped[:, :, :num_param]
