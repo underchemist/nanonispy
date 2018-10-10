@@ -143,7 +143,7 @@ class TestGridFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_grid_data(self, suffix='3ds'):
+    def create_dummy_grid_data(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -159,7 +159,7 @@ class TestGridFile(unittest.TestCase):
 
         return f
 
-    def create_dummy_grid_data_v2(self, suffix='3ds'):
+    def create_dummy_grid_data_v2(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -198,7 +198,7 @@ class TestGridFile(unittest.TestCase):
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
-            f = self.create_dummy_grid_data(suffix='sxm')
+            f = self.create_dummy_grid_data(suffix='.sxm')
             GF = nap.read.Grid(f.name)
 
     def test_header_entries(self):
@@ -329,7 +329,7 @@ class TestSpecFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_spec_data(self, suffix='dat'):
+    def create_dummy_spec_data(self, suffix='.dat'):
         base = os.path.dirname(__file__)
         f = open(base+'/Bias-Spectroscopy002.dat', 'rb')
         f.close()
