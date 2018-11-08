@@ -305,17 +305,28 @@ class TestScanFile(unittest.TestCase):
                      'scan_angle': '0.000E+0',
                      'scan_dir': 'up',
                      'scan_file': 'C:\\STM data\\2014-11\\2014-11-21\\ScanAg111_November2014_001.sxm',
-                     'scan_offset': '[  7.217670e-08   2.414175e-07]',
+                     'scan_offset': '[  7.21767000e-08   2.41417500e-07]',
                      'scan_pixels': '[64 64]',
-                     'scan_range': '[  1.5e-07   1.5e-07]',
+                     'scan_range': '[  1.50000000e-07   1.50000000e-07]',
                      'scan_time': '[ 3.533  3.533]',
                      'scanit_type': 'FLOAT            MSBFIRST',
                      'z-controller': "{'P-gain': ('7.000E-12 m',), 'Setpoint': ('1.000E-10 A',), 'on': ('1',), 'T-const': ('2.000E-3 s',), 'Name': ('Current #3',), 'I-gain': ('3.500E-9 m/s',)}"}
 
-        for key in SF.header:
-            a = ''.join(sorted(str(SF.header[key]))).strip()
-            b = ''.join(sorted(test_dict[key])).strip()
-            self.assertEqual(a, b)
+        for key, value in SF.header.items():
+            if isinstance(value, np.ndarray):
+                a = value
+                b = np.fromstring(test_dict[key].strip('[]'), sep=' ')
+                np.testing.assert_almost_equal(a, b)
+            elif isinstance(value, np.float):
+                print(key, value)
+                a = value
+                b = np.float(test_dict[key])
+                np.testing.assert_almost_equal(a, b)
+                print(key, value)
+            else:
+                a = ''.join(sorted(str(SF.header[key]))).strip()
+                b = ''.join(sorted(test_dict[key])).strip()
+                self.assertEqual(a, b)
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
