@@ -459,53 +459,94 @@ def _parse_3ds_header(header_raw):
     header_entries = header_raw.split('\r\n')
     header_entries = header_entries[:-2]
 
-    # software version 'generic 5' had an extra header entry
-    if header_entries[2] == 'Filetype=Linear':
-        header_entries.pop(2)
+    # # software version 'generic 5' had an extra header entry
+    # if header_entries[2] == 'Filetype=Linear':
+    #     header_entries.pop(2)
 
     header_dict = dict()
 
     # grid dimensions in pixels
-    dim_px_str = _split_header_entry(header_entries[0])
+    _, dim_px_str = _split_header_entry(header_entries[0])
     header_dict['dim_px'] = [int(val) for val in dim_px_str.split(' x ')]
 
     # grid frame center position, size, angle
-    grid_str = _split_header_entry(header_entries[1], multiple=True)
+    _, grid_str = _split_header_entry(header_entries[1], multiple=True)
     header_dict['pos_xy'] = [float(val) for val in grid_str[:2]]
     header_dict['size_xy'] = [float(val) for val in grid_str[2:4]]
     header_dict['angle'] = float(grid_str[-1])
+    
+    ## automatically populate and parse the remaining header entries into the header_dict:
+    for header_entry in header_entries[2:]:
+        name, value = _split_header_entry(header_entry)
+        
+        ### change to preferred name values for nanonispy:
+        if name == 'Filetype':
+            pass
+        if name == 'Sweep Signal':
+            name = 'sweep_signal'
+        if name == 'Fixed parameters':
+            name = 'fixed_parameters'
+        if name == 'Experiment parameters':
+            name = 'experimental_parameters'
+        if name == '# Parameters (4 byte)':
+            name = 'num_parameters'
+            value = int(value)            
+        if name == 'Experiment size (bytes)':
+            name = 'experiment_size'
+            value = int(value)
+        if name == 'Points':
+            name = 'num_sweep_signal'
+            value = int(value)
+        if name == 'Channels':
+            name = 'channels'
+            header_dict['num_channels'] = len(value)  ## additional entry for nanonispy
+        if name == 'Delay before measuring (s)':
+            name = 'measure_delay'
+            value = float(value)
+        if name == 'Experiment':
+            name = 'experiment_name'
+        if name == 'Start time':
+            name = 'start_time'
+        if name == 'End time':
+            name = 'end_time'
+        if name == 'User':
+            name = 'user'
+        if name == 'Comment':
+            name = 'comment'
+             
+        header_dict[name] = value
 
-    # sweep signal
-    header_dict['sweep_signal'] = _split_header_entry(header_entries[2])
-
-    # fixed parameters
-    header_dict['fixed_parameters'] = _split_header_entry(header_entries[3], multiple=True)
-
-    # experimental parameters
-    header_dict['experimental_parameters'] = _split_header_entry(header_entries[4], multiple=True)
-
-    # number of parameters (each 4 bytes)
-    header_dict['num_parameters'] = int(_split_header_entry(header_entries[5]))
-
-    # experiment size in bytes
-    header_dict['experiment_size'] = int(_split_header_entry(header_entries[6]))
-
-    # number of points of sweep signal
-    header_dict['num_sweep_signal'] = int(_split_header_entry(header_entries[7]))
-
-    # channel names
-    header_dict['channels'] = _split_header_entry(header_entries[8], multiple=True)
-    header_dict['num_channels'] = len(header_dict['channels'])
-
-    # measure delay
-    header_dict['measure_delay'] = float(_split_header_entry(header_entries[9]))
-
-    # metadata
-    header_dict['experiment_name'] = _split_header_entry(header_entries[10])
-    header_dict['start_time'] = _split_header_entry(header_entries[11])
-    header_dict['end_time'] = _split_header_entry(header_entries[12])
-    header_dict['user'] = _split_header_entry(header_entries[13])
-    header_dict['comment'] = _split_header_entry(header_entries[14])
+    # # sweep signal
+    # header_dict['sweep_signal'] = _split_header_entry(header_entries[2])
+    #
+    # # fixed parameters
+    # header_dict['fixed_parameters'] = _split_header_entry(header_entries[3], multiple=True)
+    #
+    # # experimental parameters
+    # header_dict['experimental_parameters'] = _split_header_entry(header_entries[4], multiple=True)
+    #
+    # # number of parameters (each 4 bytes)
+    # header_dict['num_parameters'] = int(_split_header_entry(header_entries[5]))
+    #
+    # # experiment size in bytes
+    # header_dict['experiment_size'] = int(_split_header_entry(header_entries[6]))
+    #
+    # # number of points of sweep signal
+    # header_dict['num_sweep_signal'] = int(_split_header_entry(header_entries[7]))
+    #
+    # # channel names
+    # header_dict['channels'] = _split_header_entry(header_entries[8], multiple=True)
+    # header_dict['num_channels'] = len(header_dict['channels'])
+    #
+    # # measure delay
+    # header_dict['measure_delay'] = float(_split_header_entry(header_entries[9]))
+    #
+    # # metadata
+    # header_dict['experiment_name'] = _split_header_entry(header_entries[10])
+    # header_dict['start_time'] = _split_header_entry(header_entries[11])
+    # header_dict['end_time'] = _split_header_entry(header_entries[12])
+    # header_dict['user'] = _split_header_entry(header_entries[13])
+    # header_dict['comment'] = _split_header_entry(header_entries[14])
 
     return header_dict
 
@@ -622,12 +663,16 @@ def _split_header_entry(entry, multiple=False):
     those by ';' character.
     """
 
-    _, val_str = entry.split("=", 1)
+    val_name, val_str = entry.split("=", 1)
+    
+    ## automatically detect if multiple entries in val_str
+    if ';' in val_str:
+        multiple = True
 
     if multiple:
-        return val_str.strip('"').split(';')
+        return val_name, val_str.strip('"').split(';')
     else:
-        return val_str.strip('"')
+        return val_name, val_str.strip('"')
 
 
 def save_array(file, arr, allow_pickle=True):
