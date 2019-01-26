@@ -72,3 +72,4 @@ conda_build/
 boiler.py
 nanonispy-project.sublime-workspace
 nanonispy-project.sublime-project
+nanonispy-project.code-workspace
