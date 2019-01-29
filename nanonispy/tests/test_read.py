@@ -143,7 +143,7 @@ class TestGridFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_grid_data(self, suffix='3ds'):
+    def create_dummy_grid_data(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -159,7 +159,7 @@ class TestGridFile(unittest.TestCase):
 
         return f
 
-    def create_dummy_grid_data_v2(self, suffix='3ds'):
+    def create_dummy_grid_data_v2(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -198,7 +198,7 @@ class TestGridFile(unittest.TestCase):
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
-            f = self.create_dummy_grid_data(suffix='sxm')
+            f = self.create_dummy_grid_data(suffix='.sxm')
             GF = nap.read.Grid(f.name)
 
     def test_header_entries(self):
@@ -312,10 +312,21 @@ class TestScanFile(unittest.TestCase):
                      'scanit_type': 'FLOAT            MSBFIRST',
                      'z-controller': "{'P-gain': ('7.000E-12 m',), 'Setpoint': ('1.000E-10 A',), 'on': ('1',), 'T-const': ('2.000E-3 s',), 'Name': ('Current #3',), 'I-gain': ('3.500E-9 m/s',)}"}
 
-        for key in SF.header:
-            a = ''.join(sorted(str(SF.header[key])))
-            b = ''.join(sorted(test_dict[key]))
-            self.assertEqual(a, b)
+        for key, value in SF.header.items():
+            if isinstance(value, np.ndarray):
+                a = value
+                b = np.fromstring(test_dict[key].strip('[]'), sep=' ')
+                np.testing.assert_almost_equal(a, b)
+            elif isinstance(value, np.float):
+                print(key, value)
+                a = value
+                b = np.float(test_dict[key])
+                np.testing.assert_almost_equal(a, b)
+                print(key, value)
+            else:
+                a = ''.join(sorted(str(SF.header[key]))).strip()
+                b = ''.join(sorted(test_dict[key])).strip()
+                self.assertEqual(a, b)
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
@@ -329,7 +340,7 @@ class TestSpecFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_spec_data(self, suffix='dat'):
+    def create_dummy_spec_data(self, suffix='.dat'):
         base = os.path.dirname(__file__)
         f = open(base+'/Bias-Spectroscopy002.dat', 'rb')
         f.close()
