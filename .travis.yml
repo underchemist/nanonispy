@@ -2,6 +2,7 @@ language: python
 branches:
   only:
     - master
+    - update-readme
 python:
   - "3.4"
   - "3.5"
