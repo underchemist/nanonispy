@@ -15,11 +15,9 @@ Requirements
 
 Currently written and tested with
 
+- python 3.7
 - python 3.6
-- python 3.5
-- python 3.4
 
-**dropping support for python 3.3 due to matplotlib no longer supporting it**
 
 Depends on
 
