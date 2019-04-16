@@ -1,8 +1,9 @@
 import os
-import numpy as np
 import warnings
 
-_end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
+import numpy as np
+
+from .constants import nanonis_format_dict, nanonis_end_tags
 
 
 class NanonisFile:
@@ -106,7 +107,7 @@ class NanonisFile:
         """
 
         with open(self.fname, 'rb') as f:
-            tag = _end_tags[self.filetype]
+            tag = nanonis_end_tags[self.filetype]
 
             # Set to a default value to know if end_tag wasn't found
             byte_offset = -1
@@ -304,7 +305,7 @@ class Scan(NanonisFile):
         If fname does not have a '.sxm' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, data_format=):
         _is_valid_file(fname, ext='sxm')
         super().__init__(fname)
         self.header = _parse_sxm_header(self.header_raw)
