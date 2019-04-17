@@ -5,4 +5,4 @@ nanonis_format_dict = {
     'little endian float 64': '<f8',
 }
 
-nanonis_end_tags = dict(':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
+nanonis_end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')

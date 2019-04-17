@@ -35,6 +35,7 @@ class NanonisFile:
     """
 
     def __init__(self, fname):
+        _data_format = nanonis_format_dict
         self.datadir, self.basename = os.path.split(fname)
         self.fname = fname
         self.filetype = self._determine_filetype()
@@ -130,6 +131,17 @@ class NanonisFile:
 
         return byte_offset
 
+    def set_data_format(self, data_format):
+        # default value is '>f4' big endian float 32 bit
+        if data_format is None:
+            self.data_format = nanonis_format_dict['big endian float 32']
+        else:
+            try:
+                self.data_format = nanonis_format_dict[data_format]
+            except KeyError as exc:
+                self.data_format = nanonis_format_dict['big endian float 32']
+                wranings.warn('{} is not a valid data format'.format(data_format))
+
 class Grid(NanonisFile):
 
     """
@@ -179,9 +191,10 @@ class Grid(NanonisFile):
         If fname does not have a '.3ds' extension.
     """
 
-    def __init__(self, fname, header_override=None):
+    def __init__(self, fname, header_override=None, data_format=None):
         _is_valid_file(fname, ext='3ds')
         super().__init__(fname)
+        self.set_data_format(data_format)
         self.header = _parse_3ds_header(self.header_raw, header_override=header_override)
         self.signals = self._load_data()
         self.signals['sweep_signal'] = self._derive_sweep_signal()
@@ -206,7 +219,7 @@ class Grid(NanonisFile):
         # open and seek to start of data
         f = open(self.fname, 'rb')
         f.seek(self.byte_offset)
-        data_format = '>f4'
+        data_format = self.data_format
         griddata = np.fromfile(f, dtype=data_format)
         f.close()
 
@@ -305,9 +318,10 @@ class Scan(NanonisFile):
         If fname does not have a '.sxm' extension.
     """
 
-    def __init__(self, fname, data_format=):
+    def __init__(self, fname, data_format=None):
         _is_valid_file(fname, ext='sxm')
         super().__init__(fname)
+        self.set_data_format(data_format)
         self.header = _parse_sxm_header(self.header_raw)
 
         # data begins with 4 byte code, add 4 bytes to offset instead
@@ -315,6 +329,7 @@ class Scan(NanonisFile):
 
         # load data
         self.signals = self._load_data()
+
 
     def _load_data(self):
         """
@@ -337,7 +352,7 @@ class Scan(NanonisFile):
         # open and seek to start of data
         f = open(self.fname, 'rb')
         f.seek(self.byte_offset)
-        data_format = '>f4'
+        data_format = self.data_format
         scandata = np.fromfile(f, dtype=data_format)
         f.close()
 
