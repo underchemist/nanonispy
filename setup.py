@@ -6,7 +6,7 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.rst')) as f:
     long_description = f.read()
-version = '1.0.5'
+version = '1.0.6'
 
 setup(
     name='nanonispy',
