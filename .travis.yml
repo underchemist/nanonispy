@@ -1,15 +1,29 @@
 language: python
+matrix:
+  include:
+  - name: 3.6 Unit Test
+    python: '3.6'
+  - name: 3.7 Unit Test
+    sudo: required
+    dist: xenial
+    python: '3.7'
 branches:
   only:
-    - master
-python:
-  - "3.4"
-  - "3.5"
-  - "3.6"
+  - master
+  - develop
 install:
-  - pip install python-coveralls
-  - pip install -r requirements.txt
+- pip install python-coveralls
+- pip install -r requirements.txt
 script:
-  - python setup.py install
-  - nosetests --with-coverage --cover-branches --cover-package=nanonispy
+- python setup.py install
+- nosetests --with-coverage --cover-branches --cover-package=nanonispy
 after_success: coveralls
+deploy:
+  provider: pypi
+  user: "underchemist"
+  password:
+    secure: vpvtgXLRsx5jjVYoW7XATVkFXWS51+YdGqnzjZ3TMuYIUf/hFOX+DZXsoUsoI+qOzVe6yuqfvtImjwhxoKGwpVdsfVvYKr+7zH/4Hd14itZ09bUNwy8jYKQxHXN2op8pN3rxjZvspnHII98J+03J7zqxR1Ohi3ORpdUkoVZfbCitBP4LtllV5/9fVbkyanpUrRV7dwUJPjOZM7oJpKJXeMDYJ74Hek+AG3S2Ap7Q3ck1F8+/tuS5X2r0+UoeJQD4EZG9j9nM3s72Ec25tHsdrEqtp7CVBDuINxFElR0jRt47b1zb+OA/B2TcNa/FXIQp7xHamwsdVdK0Nklubq94G8DlvOeqLBCkwsqrGT8lSJlEqB9bR6Cckf8j4Ya77D+J3Bw56JPIpCbkcg0Xjy8yeJmdJWr7d9jiR02cQrCxTGQIuNtKTywkShUl/6AzF2vcZCGX2zsKDcssdSmkZHr9H4TOpq3jwy6Vhone9vNrtapQNJM41wrRWjjnoW1Ikmi9r6sZTaS3DRvBsezQVfB47ytOF6aQg+gHOkta+qZZWFNrgBjC9MJgq7m58plNZMidYZ14zruTZtvwyzpAKBKGacaVWgqxkhwOB1Xdeh5cIcv2D5W4dsa3CIQBJo32/pE6/C/0psm4ca8lwuaywi4rSYRxr7Iuc6vlF7mfFup4H/c=
+  on:
+     tags: true
+     branch: master
+

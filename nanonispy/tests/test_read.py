@@ -3,6 +3,7 @@ import tempfile
 import os
 import numpy as np
 import warnings
+from pathlib import Path
 
 import nanonispy as nap
 
@@ -143,7 +144,7 @@ class TestGridFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_grid_data(self, suffix='3ds'):
+    def create_dummy_grid_data(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -159,7 +160,7 @@ class TestGridFile(unittest.TestCase):
 
         return f
 
-    def create_dummy_grid_data_v2(self, suffix='3ds'):
+    def create_dummy_grid_data_v2(self, suffix='.3ds'):
         """
         return tempfile file object with dummy header info
         """
@@ -198,7 +199,7 @@ class TestGridFile(unittest.TestCase):
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
-            f = self.create_dummy_grid_data(suffix='sxm')
+            f = self.create_dummy_grid_data(suffix='.sxm')
             GF = nap.read.Grid(f.name)
 
     def test_header_entries(self):
@@ -228,13 +229,34 @@ class TestGridFile(unittest.TestCase):
             b = ''.join(sorted(test_dict[key]))
             self.assertEqual(a, b)
 
-    def test_both_header_formats(self):
+    def test_extra_entry_in_header(self):
         f = self.create_dummy_grid_data()
         f2 = self.create_dummy_grid_data_v2()
         GF = nap.read.Grid(f.name)
         GF2 = nap.read.Grid(f2.name)
 
-        self.assertEqual(GF.header, GF2.header)
+        diff = GF2.header.keys() - GF.header.keys()
+        self.assertIn('Filetype', diff)
+
+    def test_missing_header_raw_entry(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[22:]  # remove first entry
+        with self.assertRaises(KeyError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_missing_header_raw_value(self):
+        f = self.create_dummy_grid_data()
+        T = nap.read.NanonisFile(f.name)
+        header_missing = T.header_raw[:10] + T.header_raw[19:]
+        with self.assertRaises(ValueError):
+            nap.read._parse_3ds_header(header_missing, None)
+
+    def test_header_override(self):
+        f = self.create_dummy_grid_data()
+        header_override = {'Sweep Signal': 'Not Bias (V)'}
+        GF = nap.read.Grid(f.name, header_override=header_override)
+        self.assertEqual(GF.header['sweep_signal'], header_override['Sweep Signal'])
 
 
 class TestScanFile(unittest.TestCase):
@@ -291,10 +313,21 @@ class TestScanFile(unittest.TestCase):
                      'scanit_type': 'FLOAT            MSBFIRST',
                      'z-controller': "{'P-gain': ('7.000E-12 m',), 'Setpoint': ('1.000E-10 A',), 'on': ('1',), 'T-const': ('2.000E-3 s',), 'Name': ('Current #3',), 'I-gain': ('3.500E-9 m/s',)}"}
 
-        for key in SF.header:
-            a = ''.join(sorted(str(SF.header[key])))
-            b = ''.join(sorted(test_dict[key]))
-            self.assertEqual(a, b)
+        for key, value in SF.header.items():
+            if isinstance(value, np.ndarray):
+                a = value
+                b = np.fromstring(test_dict[key].strip('[]'), sep=' ')
+                np.testing.assert_almost_equal(a, b)
+            elif isinstance(value, np.float):
+                print(key, value)
+                a = value
+                b = np.float(test_dict[key])
+                np.testing.assert_almost_equal(a, b)
+                print(key, value)
+            else:
+                a = ''.join(sorted(str(SF.header[key]))).strip()
+                b = ''.join(sorted(test_dict[key])).strip()
+                self.assertEqual(a, b)
 
     def test_raises_correct_instance_error(self):
         with self.assertRaises(nap.read.UnhandledFileError):
@@ -308,7 +341,7 @@ class TestSpecFile(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_dummy_spec_data(self, suffix='dat'):
+    def create_dummy_spec_data(self, suffix='.dat'):
         base = os.path.dirname(__file__)
         f = open(base+'/Bias-Spectroscopy002.dat', 'rb')
         f.close()
@@ -347,6 +380,20 @@ class TestSpecFile(unittest.TestCase):
         entry = 'entry1\r\n\r\n[DATA]\r\n'
         expected_result = {'entry1': ''}
         self.assertEqual(nap.read._parse_dat_header(entry), expected_result)
+
+    def test_get_num_lines(self):
+        f = self.create_dummy_spec_data()
+        SP = nap.read.Spec(f.name)
+        self.assertEqual(SP._num_header_lines(), 17)
+
+    def test_duplicate_headers(self):
+        try:
+            base = Path(__file__).parent
+            f = base / 'duplicate_headers.dat'
+            SP = nap.read.Spec(f)
+        except Exception:
+            self.fail('An error occured parsing header with duplicate entries.')
+
 
 class TestUtilFunctions(unittest.TestCase):
 

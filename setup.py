@@ -6,7 +6,7 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.rst')) as f:
     long_description = f.read()
-version = '1.0.5'
+version = '1.0.6'
 
 setup(
     name='nanonispy',
@@ -23,12 +23,11 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Physics',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
     keywords='science numpy parse library',
-    python_requires='>=3.3',
+    python_requires='>=3.6',
     packages=['nanonispy', 'nanonispy.tests'],
     package_data={'nanonispy': ['LICENSE', 'README.md'], },
     install_requires=['numpy', ],

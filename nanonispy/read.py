@@ -1,8 +1,9 @@
 import os
-import numpy as np
 import warnings
 
-_end_tags = dict(grid=':HEADER_END:', scan='SCANIT_END', spec='[DATA]')
+import numpy as np
+
+from .constants import nanonis_format_dict, nanonis_end_tags
 
 
 class NanonisFile:
@@ -34,6 +35,7 @@ class NanonisFile:
     """
 
     def __init__(self, fname):
+        _data_format = nanonis_format_dict
         self.datadir, self.basename = os.path.split(fname)
         self.fname = fname
         self.filetype = self._determine_filetype()
@@ -57,11 +59,12 @@ class NanonisFile:
             'sxm', or 'dat'.
         """
 
-        if self.fname[-3:] == '3ds':
+        _, fname_ext = os.path.splitext(self.fname)
+        if fname_ext == '.3ds':
             return 'grid'
-        elif self.fname[-3:] == 'sxm':
+        elif fname_ext == '.sxm':
             return 'scan'
-        elif self.fname[-3:] == 'dat':
+        elif fname_ext == '.dat':
             return 'spec'
         else:
             raise UnhandledFileError('{} is not a supported filetype or does not exist'.format(self.basename))
@@ -105,7 +108,7 @@ class NanonisFile:
         """
 
         with open(self.fname, 'rb') as f:
-            tag = _end_tags[self.filetype]
+            tag = nanonis_end_tags[self.filetype]
 
             # Set to a default value to know if end_tag wasn't found
             byte_offset = -1
@@ -130,6 +133,17 @@ class NanonisFile:
                         )
 
         return byte_offset
+
+    def set_data_format(self, data_format):
+        # default value is '>f4' big endian float 32 bit
+        if data_format is None:
+            self.data_format = nanonis_format_dict['big endian float 32']
+        else:
+            try:
+                self.data_format = nanonis_format_dict[data_format]
+            except KeyError as exc:
+                self.data_format = nanonis_format_dict['big endian float 32']
+                wranings.warn('{} is not a valid data format'.format(data_format))
 
 class Grid(NanonisFile):
 
@@ -160,6 +174,10 @@ class Grid(NanonisFile):
     ----------
     fname : str
         Filename for grid file.
+    header_override : dict, optional
+        A dict of key:value to override any corresponding key:value should
+        they be wrong or missing in your header. Keys in header_override must
+        match keys in Grid.header_raw.
 
     Attributes
     ----------
@@ -176,10 +194,11 @@ class Grid(NanonisFile):
         If fname does not have a '.3ds' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, header_override=None, data_format=None):
         _is_valid_file(fname, ext='3ds')
         super().__init__(fname)
-        self.header = _parse_3ds_header(self.header_raw)
+        self.set_data_format(data_format)
+        self.header = _parse_3ds_header(self.header_raw, header_override=header_override)
         self.signals = self._load_data()
         self.signals['sweep_signal'] = self._derive_sweep_signal()
         self.signals['topo'] = self._extract_topo()
@@ -203,7 +222,7 @@ class Grid(NanonisFile):
         # open and seek to start of data
         f = open(self.fname, 'rb')
         f.seek(self.byte_offset)
-        data_format = '>f4'
+        data_format = self.data_format
         griddata = np.fromfile(f, dtype=data_format)
         f.close()
 
@@ -308,9 +327,10 @@ class Scan(NanonisFile):
         If fname does not have a '.sxm' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, data_format=None):
         _is_valid_file(fname, ext='sxm')
         super().__init__(fname)
+        self.set_data_format(data_format)
         self.header = _parse_sxm_header(self.header_raw)
 
         # data begins with 4 byte code, add 4 bytes to offset instead
@@ -318,6 +338,7 @@ class Scan(NanonisFile):
 
         # load data
         self.signals = self._load_data()
+
 
     def _load_data(self):
         """
@@ -340,7 +361,7 @@ class Scan(NanonisFile):
         # open and seek to start of data
         f = open(self.fname, 'rb')
         f.seek(self.byte_offset)
-        data_format = '>f4'
+        data_format = self.data_format
         scandata = np.fromfile(f, dtype=data_format)
         f.close()
 
@@ -407,19 +428,24 @@ class Spec(NanonisFile):
 
         column_names = f.readline().strip('\n').split('\t')
         f.close()
-        
-        f = open(self.fname, 'r')
-        ff = f.readlines()
-        header_lines = ff.index('[DATA]\n') + 2
-        f.close()
-        
-        # header_lines = len(self.header) + 4
-        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=header_lines)
+
+        num_lines = self._num_header_lines()
+        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=num_lines)
+
 
         for i, name in enumerate(column_names):
             data_dict[name] = specdata[:, i]
 
         return data_dict
+
+    def _num_header_lines(self):
+        """Number of lines the header is composed of"""
+        with open(self.fname, 'r') as f:
+            data = f.readlines()
+            for i, line in enumerate(data):
+                if nanonis_end_tags['spec'] in line:
+                    return i + 2  # add 2 to skip the tag itself and column names
+        return 0
 
 
 class UnhandledFileError(Exception):
@@ -438,7 +464,7 @@ class FileHeaderNotFoundError(Exception):
     pass
 
 
-def _parse_3ds_header(header_raw):
+def _parse_3ds_header(header_raw, header_override):
     """
     Parse raw header string.
 
@@ -459,94 +485,97 @@ def _parse_3ds_header(header_raw):
     header_entries = header_raw.split('\r\n')
     header_entries = header_entries[:-2]
 
-    # # software version 'generic 5' had an extra header entry
-    # if header_entries[2] == 'Filetype=Linear':
-    #     header_entries.pop(2)
 
+    # Convert the strings to a dictionary.
+    raw_dict = dict()
+    for entry in header_entries:
+        key, val = _split_header_entry(entry)
+        raw_dict[key] = val
+
+    if header_override is not None:
+        for key, val in header_override.items():
+            raw_dict[key] = val  # creates new entry if key doesn't match key in raw_dict
+
+    # Transfer parameters from raw_dict to header_dict
+    # Get the expected parameters first
     header_dict = dict()
 
-    # grid dimensions in pixels
-    _, dim_px_str = _split_header_entry(header_entries[0])
-    header_dict['dim_px'] = [int(val) for val in dim_px_str.split(' x ')]
+    try:
+        # grid dimensions in pixels
+        header_dict['dim_px'] = [int(val) for val in raw_dict['Grid dim'].split(' x ')]
+        raw_dict.pop('Grid dim')
 
-    # grid frame center position, size, angle
-    _, grid_str = _split_header_entry(header_entries[1], multiple=True)
-    header_dict['pos_xy'] = [float(val) for val in grid_str[:2]]
-    header_dict['size_xy'] = [float(val) for val in grid_str[2:4]]
-    header_dict['angle'] = float(grid_str[-1])
-    
-    ## automatically populate and parse the remaining header entries into the header_dict:
-    for header_entry in header_entries[2:]:
-        name, value = _split_header_entry(header_entry)
-        
-        ### change to preferred name values for nanonispy:
-        if name == 'Filetype':
-            pass
-        if name == 'Sweep Signal':
-            name = 'sweep_signal'
-        if name == 'Fixed parameters':
-            name = 'fixed_parameters'
-        if name == 'Experiment parameters':
-            name = 'experimental_parameters'
-        if name == '# Parameters (4 byte)':
-            name = 'num_parameters'
-            value = int(value)            
-        if name == 'Experiment size (bytes)':
-            name = 'experiment_size'
-            value = int(value)
-        if name == 'Points':
-            name = 'num_sweep_signal'
-            value = int(value)
-        if name == 'Channels':
-            name = 'channels'
-            header_dict['num_channels'] = len(value)  ## additional entry for nanonispy
-        if name == 'Delay before measuring (s)':
-            name = 'measure_delay'
-            value = float(value)
-        if name == 'Experiment':
-            name = 'experiment_name'
-        if name == 'Start time':
-            name = 'start_time'
-        if name == 'End time':
-            name = 'end_time'
-        if name == 'User':
-            name = 'user'
-        if name == 'Comment':
-            name = 'comment'
-             
-        header_dict[name] = value
+        # grid frame center position, size, angle. Assumes len(raw_dict['Grid settings']) = 4
+        header_dict['pos_xy'] = [float(val) for val in raw_dict['Grid settings'][:2]]
+        header_dict['size_xy'] = [float(val) for val in raw_dict['Grid settings'][2:4]]
+        header_dict['angle'] = float(raw_dict['Grid settings'][4])
+        raw_dict.pop('Grid settings')
 
-    # # sweep signal
-    # header_dict['sweep_signal'] = _split_header_entry(header_entries[2])
-    #
-    # # fixed parameters
-    # header_dict['fixed_parameters'] = _split_header_entry(header_entries[3], multiple=True)
-    #
-    # # experimental parameters
-    # header_dict['experimental_parameters'] = _split_header_entry(header_entries[4], multiple=True)
-    #
-    # # number of parameters (each 4 bytes)
-    # header_dict['num_parameters'] = int(_split_header_entry(header_entries[5]))
-    #
-    # # experiment size in bytes
-    # header_dict['experiment_size'] = int(_split_header_entry(header_entries[6]))
-    #
-    # # number of points of sweep signal
-    # header_dict['num_sweep_signal'] = int(_split_header_entry(header_entries[7]))
-    #
-    # # channel names
-    # header_dict['channels'] = _split_header_entry(header_entries[8], multiple=True)
-    # header_dict['num_channels'] = len(header_dict['channels'])
-    #
-    # # measure delay
-    # header_dict['measure_delay'] = float(_split_header_entry(header_entries[9]))
-    #
-    # # metadata
-    # header_dict['experiment_name'] = _split_header_entry(header_entries[10])
-    # header_dict['start_time'] = _split_header_entry(header_entries[11])
-    # header_dict['end_time'] = _split_header_entry(header_entries[12])
-    # header_dict['user'] = _split_header_entry(header_entries[13])
-    # header_dict['comment'] = _split_header_entry(header_entries[14])
+        # sweep signal
+        header_dict['sweep_signal'] = raw_dict['Sweep Signal']
+        raw_dict.pop('Sweep Signal')
+
+        # fixed parameters
+        header_dict['fixed_parameters'] = raw_dict['Fixed parameters']
+        raw_dict.pop('Fixed parameters')
+
+        # experimental parameters
+        header_dict['experimental_parameters'] = raw_dict['Experiment parameters']
+        raw_dict.pop('Experiment parameters')
+
+        # number of parameters (each 4 bytes)
+        header_dict['num_parameters'] = int(raw_dict['# Parameters (4 byte)'])
+        raw_dict.pop('# Parameters (4 byte)')
+
+        # experiment size in bytes
+        header_dict['experiment_size'] = int(raw_dict['Experiment size (bytes)'])
+        raw_dict.pop('Experiment size (bytes)')
+
+        # number of points of sweep signal
+        header_dict['num_sweep_signal'] = int(raw_dict['Points'])
+        raw_dict.pop('Points')
+
+        # channel names
+        header_dict['channels'] = raw_dict['Channels']
+        if type(header_dict['channels']) == str:
+            # will be str if only one channel, make list of str so number of channels can be counted properly
+            l = []
+            l.append(header_dict['channels'])
+            header_dict['channels'] = l
+        header_dict['num_channels'] = len(header_dict['channels'])
+        raw_dict.pop('Channels')
+
+        # measure delay
+        header_dict['measure_delay'] = float(raw_dict['Delay before measuring (s)'])
+        raw_dict.pop('Delay before measuring (s)')
+
+        # metadata
+        header_dict['experiment_name'] = raw_dict['Experiment']
+        header_dict['start_time'] = raw_dict['Start time']
+        header_dict['end_time'] = raw_dict['End time']
+        header_dict['user'] = raw_dict['User']
+        header_dict['comment'] = raw_dict['Comment']
+        raw_dict.pop('Experiment')
+        raw_dict.pop('Start time')
+        raw_dict.pop('End time')
+        raw_dict.pop('User')
+        raw_dict.pop('Comment')
+
+    except (KeyError, ValueError) as e:
+        msg = ' You can edit your header file or provide an override value in header_override'
+
+        # guide user to using override dict
+        if isinstance(e, KeyError):
+            raise KeyError('[{key}] is missing from header.'.format(key=e.args[0]) + msg)
+        elif isinstance(e, ValueError):
+            print(e.args)
+            raise ValueError('Unexpected value found in header.' + msg)
+        else:
+            raise
+
+    # fold remaining header entries into dict
+    for key, val in raw_dict.items():
+        header_dict[key] = val
 
     return header_dict
 
@@ -657,22 +686,20 @@ def _clean_sxm_header(header_dict):
     pass
 
 
-def _split_header_entry(entry, multiple=False):
+def _split_header_entry(entry):
     """
     Split 3ds header entries by '=' character. If multiple values split
     those by ';' character.
     """
 
-    val_name, val_str = entry.split("=", 1)
-    
-    ## automatically detect if multiple entries in val_str
-    if ';' in val_str:
-        multiple = True
 
-    if multiple:
-        return val_name, val_str.strip('"').split(';')
+    key_str, val_str = entry.split("=", 1)
+
+    if ';' in val_str:
+        return key_str, (val_str.strip('"').split(';'))
     else:
-        return val_name, val_str.strip('"')
+        return key_str, val_str.strip('"')
+
 
 
 def save_array(file, arr, allow_pickle=True):
@@ -755,5 +782,6 @@ def _is_valid_file(fname, ext):
     """
     Detect if invalid file is being initialized by class.
     """
-    if fname[-3:] != ext:
+    _, fname_ext = os.path.splitext(fname)
+    if fname_ext[1:] != ext:
         raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
