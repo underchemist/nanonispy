@@ -3,6 +3,7 @@ import tempfile
 import os
 import numpy as np
 import warnings
+from pathlib import Path
 
 import nanonispy as nap
 
@@ -379,6 +380,20 @@ class TestSpecFile(unittest.TestCase):
         entry = 'entry1\r\n\r\n[DATA]\r\n'
         expected_result = {'entry1': ''}
         self.assertEqual(nap.read._parse_dat_header(entry), expected_result)
+
+    def test_get_num_lines(self):
+        f = self.create_dummy_spec_data()
+        SP = nap.read.Spec(f.name)
+        self.assertEqual(SP._num_header_lines(), 17)
+
+    def test_duplicate_headers(self):
+        try:
+            base = Path(__file__).parent
+            f = base / 'duplicate_headers.dat'
+            SP = nap.read.Spec(f)
+        except Exception:
+            self.fail('An error occured parsing header with duplicate entries.')
+
 
 class TestUtilFunctions(unittest.TestCase):
 

@@ -418,13 +418,22 @@ class Spec(NanonisFile):
 
         column_names = f.readline().strip('\n').split('\t')
         f.close()
-        header_lines = len(self.header) + 4
-        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=header_lines)
+        num_lines = self._num_header_lines()
+        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=num_lines)
 
         for i, name in enumerate(column_names):
             data_dict[name] = specdata[:, i]
 
         return data_dict
+
+    def _num_header_lines(self):
+        """Number of lines the header is composed of"""
+        with open(self.fname, 'r') as f:
+            data = f.readlines()
+            for i, line in enumerate(data):
+                if nanonis_end_tags['spec'] in line:
+                    return i + 2  # add 2 to skip the tag itself and column names
+        return 0
 
 
 class UnhandledFileError(Exception):
