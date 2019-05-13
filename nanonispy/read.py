@@ -34,8 +34,9 @@ class NanonisFile:
         Unproccessed header information.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, flip_pixel_order=False):
         _data_format = nanonis_format_dict
+        self._flip_pixel_order = flip_pixel_order
         self.datadir, self.basename = os.path.split(fname)
         self.fname = fname
         self.filetype = self._determine_filetype()
@@ -60,14 +61,16 @@ class NanonisFile:
         """
 
         _, fname_ext = os.path.splitext(self.fname)
-        if fname_ext == '.3ds':
-            return 'grid'
-        elif fname_ext == '.sxm':
-            return 'scan'
-        elif fname_ext == '.dat':
-            return 'spec'
+        if fname_ext == ".3ds":
+            return "grid"
+        elif fname_ext == ".sxm":
+            return "scan"
+        elif fname_ext == ".dat":
+            return "spec"
         else:
-            raise UnhandledFileError('{} is not a supported filetype or does not exist'.format(self.basename))
+            raise UnhandledFileError(
+                "{} is not a supported filetype or does not exist".format(self.basename)
+            )
 
     def read_raw_header(self, byte_offset):
         """
@@ -88,8 +91,8 @@ class NanonisFile:
             string.
         """
 
-        with open(self.fname, 'rb') as f:
-            return f.read(byte_offset).decode('utf-8', errors='replace')
+        with open(self.fname, "rb") as f:
+            return f.read(byte_offset).decode("utf-8", errors="replace")
 
     def start_byte(self):
         """
@@ -107,7 +110,7 @@ class NanonisFile:
             Size of header in bytes.
         """
 
-        with open(self.fname, 'rb') as f:
+        with open(self.fname, "rb") as f:
             tag = nanonis_end_tags[self.filetype]
 
             # Set to a default value to know if end_tag wasn't found
@@ -118,29 +121,32 @@ class NanonisFile:
                 try:
                     entry = line.strip().decode()
                 except UnicodeDecodeError:
-                    warnings.warn('{} has non-uft-8 characters, replacing them.'.format(f.name))
-                    entry = line.strip().decode('utf-8', errors='replace')
+                    warnings.warn(
+                        "{} has non-uft-8 characters, replacing them.".format(f.name)
+                    )
+                    entry = line.strip().decode("utf-8", errors="replace")
                 if tag in entry:
                     byte_offset = f.tell()
                     break
 
             if byte_offset == -1:
                 raise FileHeaderNotFoundError(
-                        'Could not find the {} end tag in {}'.format(tag, self.basename)
-                        )
+                    "Could not find the {} end tag in {}".format(tag, self.basename)
+                )
 
         return byte_offset
 
     def set_data_format(self, data_format):
         # default value is '>f4' big endian float 32 bit
         if data_format is None:
-            self.data_format = nanonis_format_dict['big endian float 32']
+            self.data_format = nanonis_format_dict["big endian float 32"]
         else:
             try:
                 self.data_format = nanonis_format_dict[data_format]
             except KeyError as exc:
-                self.data_format = nanonis_format_dict['big endian float 32']
-                wranings.warn('{} is not a valid data format'.format(data_format))
+                self.data_format = nanonis_format_dict["big endian float 32"]
+                wranings.warn("{} is not a valid data format".format(data_format))
+
 
 class Grid(NanonisFile):
 
@@ -191,14 +197,16 @@ class Grid(NanonisFile):
         If fname does not have a '.3ds' extension.
     """
 
-    def __init__(self, fname, header_override=None, data_format=None):
-        _is_valid_file(fname, ext='3ds')
+    def __init__(self, fname, header_override=None, data_format=None, **kwargs):
+        _is_valid_file(fname, ext="3ds")
         super().__init__(fname)
         self.set_data_format(data_format)
-        self.header = _parse_3ds_header(self.header_raw, header_override=header_override)
+        self.header = _parse_3ds_header(
+            self.header_raw, header_override=header_override
+        )
         self.signals = self._load_data()
-        self.signals['sweep_signal'] = self._derive_sweep_signal()
-        self.signals['topo'] = self._extract_topo()
+        self.signals["sweep_signal"] = self._derive_sweep_signal()
+        self.signals["topo"] = self._extract_topo()
 
     def _load_data(self):
         """
@@ -210,33 +218,43 @@ class Grid(NanonisFile):
             Channel name keyed dict of 3d array.
         """
         # load grid params
-        nx, ny = self.header['dim_px']
-        num_sweep = self.header['num_sweep_signal']
-        num_param = self.header['num_parameters']
-        num_chan = self.header['num_channels']
+        if self._flip_pixel_order:
+            ny, nx = self.header["dim_px"]
+        else:
+            nx, ny = self.header["dim_px"]
+        num_sweep = self.header["num_sweep_signal"]
+        num_param = self.header["num_parameters"]
+        num_chan = self.header["num_channels"]
         data_dict = dict()
 
+        this = "this is a test"
         # open and seek to start of data
-        f = open(self.fname, 'rb')
+        f = open(self.fname, "rb")
         f.seek(self.byte_offset)
         data_format = self.data_format
         griddata = np.fromfile(f, dtype=data_format)
         f.close()
 
         # pixel size in bytes
-        exp_size_per_pix = num_param + num_sweep*num_chan
+        exp_size_per_pix = num_param + num_sweep * num_chan
 
         # reshape from 1d to 3d
-        griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
+        try:
+            griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
+        except ValueError:  # pad with constant value if grid didn't finish
+            griddata = np.pad(
+                griddata, (0, nx * ny * exp_size_per_pix - griddata.size), "edge"
+            )
+            griddata_shaped = griddata.reshape((nx, ny, exp_size_per_pix))
 
         # experimental parameters are first num_param of every pixel
         params = griddata_shaped[:, :, :num_param]
-        data_dict['params'] = params
+        data_dict["params"] = params
 
         # extract data for each channel
-        for i, chann in enumerate(self.header['channels']):
+        for i, chann in enumerate(self.header["channels"]):
             start_ind = num_param + i * num_sweep
-            stop_ind = num_param + (i+1) * num_sweep
+            stop_ind = num_param + (i + 1) * num_sweep
             data_dict[chann] = griddata_shaped[:, :, start_ind:stop_ind]
 
         return data_dict
@@ -254,8 +272,8 @@ class Grid(NanonisFile):
             1d sweep signal, should be sample bias in most cases.
         """
         # find sweep signal start and end from a given pixel value
-        sweep_start, sweep_end = self.signals['params'][0, 0, :2]
-        num_sweep_signal = self.header['num_sweep_signal']
+        sweep_start, sweep_end = self.signals["params"][0, 0, :2]
+        num_sweep_signal = self.header["num_sweep_signal"]
 
         return np.linspace(sweep_start, sweep_end, num_sweep_signal, dtype=np.float32)
 
@@ -276,7 +294,7 @@ class Grid(NanonisFile):
             Copy of already extracted data to be more easily accessible
             in signals dict.
         """
-        return self.signals['params'][:, :, 4]
+        return self.signals["params"][:, :, 4]
 
 
 class Scan(NanonisFile):
@@ -319,7 +337,7 @@ class Scan(NanonisFile):
     """
 
     def __init__(self, fname, data_format=None):
-        _is_valid_file(fname, ext='sxm')
+        _is_valid_file(fname, ext="sxm")
         super().__init__(fname)
         self.set_data_format(data_format)
         self.header = _parse_sxm_header(self.header_raw)
@@ -330,7 +348,6 @@ class Scan(NanonisFile):
         # load data
         self.signals = self._load_data()
 
-
     def _load_data(self):
         """
         Read binary data for Nanonis sxm file.
@@ -340,9 +357,12 @@ class Scan(NanonisFile):
         dict
             Channel name keyed dict of each channel array.
         """
-        channs = list(self.header['data_info']['Name'])
+        channs = list(self.header["data_info"]["Name"])
         nchanns = len(channs)
-        nx, ny = self.header['scan_pixels']
+        if self._flip_pixel_order:
+            ny, nx = self.header["scan_pixels"]
+        else:
+            nx, ny = self.header["scan_pixels"]
 
         # assume both directions for now
         ndir = 2
@@ -350,19 +370,21 @@ class Scan(NanonisFile):
         data_dict = dict()
 
         # open and seek to start of data
-        f = open(self.fname, 'rb')
+        f = open(self.fname, "rb")
         f.seek(self.byte_offset)
         data_format = self.data_format
         scandata = np.fromfile(f, dtype=data_format)
         f.close()
 
         # reshape
-        scandata_shaped = scandata.reshape(nchanns, ndir, nx, ny)
+        scandata_shaped = scandata.reshape((nchanns, ndir, ny, nx))
 
         # extract data for each channel
         for i, chann in enumerate(channs):
-            chann_dict = dict(forward=scandata_shaped[i, 0, :, :],
-                              backward=scandata_shaped[i, 1, :, :])
+            chann_dict = dict(
+                forward=scandata_shaped[i, 0, :, :],
+                backward=scandata_shaped[i, 1, :, :],
+            )
             data_dict[chann] = chann_dict
 
         return data_dict
@@ -393,7 +415,7 @@ class Spec(NanonisFile):
     """
 
     def __init__(self, fname):
-        _is_valid_file(fname, ext='dat')
+        _is_valid_file(fname, ext="dat")
         super().__init__(fname)
         self.header = _parse_dat_header(self.header_raw)
         self.signals = self._load_data()
@@ -412,14 +434,14 @@ class Spec(NanonisFile):
         """
 
         # done differently since data is ascii, not binary
-        f = open(self.fname, 'r')
+        f = open(self.fname, "r")
         f.seek(self.byte_offset)
         data_dict = dict()
 
-        column_names = f.readline().strip('\n').split('\t')
+        column_names = f.readline().strip("\n").split("\t")
         f.close()
         num_lines = self._num_header_lines()
-        specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=num_lines)
+        specdata = np.genfromtxt(self.fname, delimiter="\t", skip_header=num_lines)
 
         for i, name in enumerate(column_names):
             data_dict[name] = specdata[:, i]
@@ -428,10 +450,10 @@ class Spec(NanonisFile):
 
     def _num_header_lines(self):
         """Number of lines the header is composed of"""
-        with open(self.fname, 'r') as f:
+        with open(self.fname, "r") as f:
             data = f.readlines()
             for i, line in enumerate(data):
-                if nanonis_end_tags['spec'] in line:
+                if nanonis_end_tags["spec"] in line:
                     return i + 2  # add 2 to skip the tag itself and column names
         return 0
 
@@ -441,6 +463,7 @@ class UnhandledFileError(Exception):
     """
     To be raised when unknown file extension is passed.
     """
+
     pass
 
 
@@ -449,6 +472,7 @@ class FileHeaderNotFoundError(Exception):
     """
     To be raised when no header information could be determined.
     """
+
     pass
 
 
@@ -470,7 +494,7 @@ def _parse_3ds_header(header_raw, header_override):
         Channel name keyed dict of 3d array.
     """
     # cleanup string and remove end tag as entry
-    header_entries = header_raw.split('\r\n')
+    header_entries = header_raw.split("\r\n")
     header_entries = header_entries[:-2]
 
     # Convert the strings to a dictionary.
@@ -481,7 +505,9 @@ def _parse_3ds_header(header_raw, header_override):
 
     if header_override is not None:
         for key, val in header_override.items():
-            raw_dict[key] = val  # creates new entry if key doesn't match key in raw_dict
+            raw_dict[
+                key
+            ] = val  # creates new entry if key doesn't match key in raw_dict
 
     # Transfer parameters from raw_dict to header_dict
     # Get the expected parameters first
@@ -489,74 +515,76 @@ def _parse_3ds_header(header_raw, header_override):
 
     try:
         # grid dimensions in pixels
-        header_dict['dim_px'] = [int(val) for val in raw_dict['Grid dim'].split(' x ')]
-        raw_dict.pop('Grid dim')
+        header_dict["dim_px"] = [int(val) for val in raw_dict["Grid dim"].split(" x ")]
+        raw_dict.pop("Grid dim")
 
         # grid frame center position, size, angle. Assumes len(raw_dict['Grid settings']) = 4
-        header_dict['pos_xy'] = [float(val) for val in raw_dict['Grid settings'][:2]]
-        header_dict['size_xy'] = [float(val) for val in raw_dict['Grid settings'][2:4]]
-        header_dict['angle'] = float(raw_dict['Grid settings'][4])
-        raw_dict.pop('Grid settings')
+        header_dict["pos_xy"] = [float(val) for val in raw_dict["Grid settings"][:2]]
+        header_dict["size_xy"] = [float(val) for val in raw_dict["Grid settings"][2:4]]
+        header_dict["angle"] = float(raw_dict["Grid settings"][4])
+        raw_dict.pop("Grid settings")
 
         # sweep signal
-        header_dict['sweep_signal'] = raw_dict['Sweep Signal']
-        raw_dict.pop('Sweep Signal')
+        header_dict["sweep_signal"] = raw_dict["Sweep Signal"]
+        raw_dict.pop("Sweep Signal")
 
         # fixed parameters
-        header_dict['fixed_parameters'] = raw_dict['Fixed parameters']
-        raw_dict.pop('Fixed parameters')
+        header_dict["fixed_parameters"] = raw_dict["Fixed parameters"]
+        raw_dict.pop("Fixed parameters")
 
         # experimental parameters
-        header_dict['experimental_parameters'] = raw_dict['Experiment parameters']
-        raw_dict.pop('Experiment parameters')
+        header_dict["experimental_parameters"] = raw_dict["Experiment parameters"]
+        raw_dict.pop("Experiment parameters")
 
         # number of parameters (each 4 bytes)
-        header_dict['num_parameters'] = int(raw_dict['# Parameters (4 byte)'])
-        raw_dict.pop('# Parameters (4 byte)')
+        header_dict["num_parameters"] = int(raw_dict["# Parameters (4 byte)"])
+        raw_dict.pop("# Parameters (4 byte)")
 
         # experiment size in bytes
-        header_dict['experiment_size'] = int(raw_dict['Experiment size (bytes)'])
-        raw_dict.pop('Experiment size (bytes)')
+        header_dict["experiment_size"] = int(raw_dict["Experiment size (bytes)"])
+        raw_dict.pop("Experiment size (bytes)")
 
         # number of points of sweep signal
-        header_dict['num_sweep_signal'] = int(raw_dict['Points'])
-        raw_dict.pop('Points')
+        header_dict["num_sweep_signal"] = int(raw_dict["Points"])
+        raw_dict.pop("Points")
 
         # channel names
-        header_dict['channels'] = raw_dict['Channels']
-        if type(header_dict['channels']) == str:
+        header_dict["channels"] = raw_dict["Channels"]
+        if type(header_dict["channels"]) == str:
             # will be str if only one channel, make list of str so number of channels can be counted properly
             l = []
-            l.append(header_dict['channels'])
-            header_dict['channels'] = l
-        header_dict['num_channels'] = len(header_dict['channels'])
-        raw_dict.pop('Channels')
+            l.append(header_dict["channels"])
+            header_dict["channels"] = l
+        header_dict["num_channels"] = len(header_dict["channels"])
+        raw_dict.pop("Channels")
 
         # measure delay
-        header_dict['measure_delay'] = float(raw_dict['Delay before measuring (s)'])
-        raw_dict.pop('Delay before measuring (s)')
+        header_dict["measure_delay"] = float(raw_dict["Delay before measuring (s)"])
+        raw_dict.pop("Delay before measuring (s)")
 
         # metadata
-        header_dict['experiment_name'] = raw_dict['Experiment']
-        header_dict['start_time'] = raw_dict['Start time']
-        header_dict['end_time'] = raw_dict['End time']
-        header_dict['user'] = raw_dict['User']
-        header_dict['comment'] = raw_dict['Comment']
-        raw_dict.pop('Experiment')
-        raw_dict.pop('Start time')
-        raw_dict.pop('End time')
-        raw_dict.pop('User')
-        raw_dict.pop('Comment')
+        header_dict["experiment_name"] = raw_dict["Experiment"]
+        header_dict["start_time"] = raw_dict["Start time"]
+        header_dict["end_time"] = raw_dict["End time"]
+        header_dict["user"] = raw_dict["User"]
+        header_dict["comment"] = raw_dict["Comment"]
+        raw_dict.pop("Experiment")
+        raw_dict.pop("Start time")
+        raw_dict.pop("End time")
+        raw_dict.pop("User")
+        raw_dict.pop("Comment")
 
     except (KeyError, ValueError) as e:
-        msg = ' You can edit your header file or provide an override value in header_override'
+        msg = " You can edit your header file or provide an override value in header_override"
 
         # guide user to using override dict
         if isinstance(e, KeyError):
-            raise KeyError('[{key}] is missing from header.'.format(key=e.args[0]) + msg)
+            raise KeyError(
+                "[{key}] is missing from header.".format(key=e.args[0]) + msg
+            )
         elif isinstance(e, ValueError):
             print(e.args)
-            raise ValueError('Unexpected value found in header.' + msg)
+            raise ValueError("Unexpected value found in header." + msg)
         else:
             raise
 
@@ -584,35 +612,36 @@ def _parse_sxm_header(header_raw):
     dict
         Channel name keyed dict of each channel array.
     """
-    header_entries = header_raw.split('\n')
+    header_entries = header_raw.split("\n")
     header_entries = header_entries[:-3]
 
     header_dict = dict()
-    entries_to_be_split = ['scan_offset',
-                           'scan_pixels',
-                           'scan_range',
-                           'scan_time']
+    entries_to_be_split = ["scan_offset", "scan_pixels", "scan_range", "scan_time"]
 
-    entries_to_be_floated = ['scan_offset',
-                             'scan_range',
-                             'scan_time',
-                             'bias',
-                             'acq_time']
+    entries_to_be_floated = [
+        "scan_offset",
+        "scan_range",
+        "scan_time",
+        "bias",
+        "acq_time",
+    ]
 
-    entries_to_be_inted = ['scan_pixels']
+    entries_to_be_inted = ["scan_pixels"]
 
     for i, entry in enumerate(header_entries):
-        if entry == ':DATA_INFO:' or entry == ':Z-CONTROLLER:':
+        if entry == ":DATA_INFO:" or entry == ":Z-CONTROLLER:":
             count = 1
-            for j in range(i+1, len(header_entries)):
-                if header_entries[j].startswith(':'):
+            for j in range(i + 1, len(header_entries)):
+                if header_entries[j].startswith(":"):
                     break
-                if header_entries[j][0] == '\t':
+                if header_entries[j][0] == "\t":
                     count += 1
-            header_dict[entry.strip(':').lower()] = _parse_scan_header_table(header_entries[i+1:i+count])
+            header_dict[entry.strip(":").lower()] = _parse_scan_header_table(
+                header_entries[i + 1 : i + count]
+            )
             continue
-        if entry.startswith(':'):
-            header_dict[entry.strip(':').lower()] = header_entries[i+1].strip()
+        if entry.startswith(":"):
+            header_dict[entry.strip(":").lower()] = header_entries[i + 1].strip()
 
     for key in entries_to_be_split:
         header_dict[key] = header_dict[key].split()
@@ -640,17 +669,17 @@ def _parse_dat_header(header_raw):
     dict
         Parsed point spectroscopy header.
     """
-    header_entries = header_raw.split('\r\n')
+    header_entries = header_raw.split("\r\n")
     header_entries = header_entries[:-3]
     header_dict = dict()
     for entry in header_entries:
         # homogenize output of .dat files with \t delimit at end of every key
-        if entry[-1] == '\t':
+        if entry[-1] == "\t":
             entry = entry[:-1]
-        if '\t' not in entry:
-            entry += '\t'
+        if "\t" not in entry:
+            entry += "\t"
 
-        key, val = entry.split('\t')
+        key, val = entry.split("\t")
         header_dict[key] = val
 
     return header_dict
@@ -681,8 +710,8 @@ def _split_header_entry(entry):
 
     key_str, val_str = entry.split("=", 1)
 
-    if ';' in val_str:
-        return key_str, (val_str.strip('"').split(';'))
+    if ";" in val_str:
+        return key_str, (val_str.strip('"').split(";"))
     else:
         return key_str, val_str.strip('"')
 
@@ -752,7 +781,7 @@ def _parse_scan_header_table(table_list):
     table_processed = []
     for row in table_list:
         # strip leading \t, split by \t
-        table_processed.append(row.strip('\t').split('\t'))
+        table_processed.append(row.strip("\t").split("\t"))
 
     # column names are first row
     keys = table_processed[0]
@@ -769,4 +798,4 @@ def _is_valid_file(fname, ext):
     """
     _, fname_ext = os.path.splitext(fname)
     if fname_ext[1:] != ext:
-        raise UnhandledFileError('{} is not a {} file'.format(fname, ext))
+        raise UnhandledFileError("{} is not a {} file".format(fname, ext))
