@@ -13,25 +13,23 @@ class NanonisFile:
 
     Handles methods and parsing tasks common to all Nanonis files.
 
-    Parameters
-    ----------
-    fname : str
-        Name of Nanonis file.
 
-    Attributes
-    ----------
-    datadir : str
-        Directory path for Nanonis file.
-    basename : str
-        Just the filename, no path.
-    fname : str
-        Full path of Nanonis file.
-    filetype : str
-        filetype corresponding to filename extension.
-    byte_offset : int
-        Size of header in bytes.
-    header_raw : str
-        Unproccessed header information.
+    Args:
+        fname (str or os.PathLike): Filename of input.
+        flip_pixel_order (bool, optional): Defaults to False. If True flips the
+            order in which binary data is read into pixel values x and y. Useful in
+            case input has unusual dimensions.
+
+    Attributes:
+        datadir (str): The parent directory of input file.
+        basename (str): The filename of input file.
+        fname (str): The filename of input file as passed by user.
+        filetype (str): The filetype of the input file. Valid values are '3ds',
+            'sxm', or 'dat'.
+        byte_offset (int): The number of bytes the until the end tag in the
+            input file. Used after parsing header information to read experiment
+            data.
+        header_raw (str): The unparsed header.
     """
 
     def __init__(self, fname, flip_pixel_order=False):
@@ -45,19 +43,15 @@ class NanonisFile:
 
     def _determine_filetype(self):
         """
-        Check last three characters for appropriate file extension,
-        raise error if not.
+        Check last three characters for appropriate file extension, raise error
+        if not.
 
-        Returns
-        -------
-        str
-            Filetype name associated with extension.
+        Raises:
+            UnhandledFileError: If last three characters of filename are not one
+                of '3ds', 'sxm', or 'dat'.
 
-        Raises
-        ------
-        UnhandledFileError
-            If last three characters of filename are not one of '3ds',
-            'sxm', or 'dat'.
+        Returns:
+            str: Filetype name associated with extension.
         """
 
         _, fname_ext = os.path.splitext(self.fname)
@@ -79,16 +73,12 @@ class NanonisFile:
         Everything before the end tag is considered to be part of the header.
         the parsing will be done later by subclass methods.
 
-        Parameters
-        ----------
-        byte_offset : int
-            Size of header in bytes. Read up to this point in file.
+        Args:
+            byte_offset (int): Size of header in bytes. Read up to this point
+                in file.
 
         Returns
-        -------
-        str
-            Contents of filename up to byte_offset as a decoded binary
-            string.
+            str: Contents of filename up to byte_offset as a decoded binary string.
         """
 
         with open(self.fname, "rb") as f:
@@ -105,9 +95,7 @@ class NanonisFile:
         'start' byte that is not actual data.
 
         Returns
-        -------
-        int
-            Size of header in bytes.
+            int: Size of header in bytes.
         """
 
         with open(self.fname, "rb") as f:
@@ -138,6 +126,7 @@ class NanonisFile:
 
     def set_data_format(self, data_format):
         # default value is '>f4' big endian float 32 bit
+
         if data_format is None:
             self.data_format = nanonis_format_dict["big endian float 32"]
         else:
@@ -173,28 +162,20 @@ class Grid(NanonisFile):
 
     Currently cannot accept grids that are incomplete.
 
-    Parameters
-    ----------
-    fname : str
-        Filename for grid file.
-    header_override : dict, optional
-        A dict of key:value to override any corresponding key:value should
-        they be wrong or missing in your header. Keys in header_override must
-        match keys in Grid.header_raw.
+    Args:
+        fname (str): Filename for grid file.
+        header_override (dict, optional): A dict of key:value to override any
+            corresponding key:value should they be wrong or missing in your header.
+            Keys in header_override must match keys in Grid.header_raw.
 
-    Attributes
-    ----------
-    header : dict
-        Parsed 3ds header. Relevant fields are converted to float,
-        otherwise most are string values.
-    signals : dict
-        Dict keys correspond to channel name, with values being the
-        corresponding data array.
+    Attributes:
+        header (dict): Parsed 3ds header. Relevant fields are converted to
+            float, otherwise most are string values.
+        signals (dict): Dict keys correspond to channel name, with values being
+            the corresponding data array.
 
-    Raises
-    ------
-    UnhandledFileError
-        If fname does not have a '.3ds' extension.
+    Raises:
+        UnhandledFileError: If fname does not have a '.3ds' extension.
     """
 
     def __init__(self, fname, header_override=None, data_format=None, **kwargs):
@@ -212,10 +193,8 @@ class Grid(NanonisFile):
         """
         Read binary data for Nanonis 3ds file.
 
-        Returns
-        -------
-        dict
-            Channel name keyed dict of 3d array.
+        Returns:
+            dict: A dict where each key is a numpy array for each channel recorded in the experiment.
         """
         # load grid params
         if self._flip_pixel_order:
@@ -266,10 +245,8 @@ class Grid(NanonisFile):
         Based on start and stop points of sweep signal in header, and
         number of sweep signal points.
 
-        Returns
-        -------
-        numpy.ndarray
-            1d sweep signal, should be sample bias in most cases.
+        Returns:
+            numpy.ndarray: 1d sweep signal, should be sample bias in most cases.
         """
         # find sweep signal start and end from a given pixel value
         sweep_start, sweep_end = self.signals["params"][0, 0, :2]
@@ -279,20 +256,15 @@ class Grid(NanonisFile):
 
     def _extract_topo(self):
         """
-        Extract topographic map based on z-controller height at each
-        pixel.
+        Extract topographic map based on z-controller height at each pixel.
 
-        The data is already extracted, though it lives in the signals
-        dict under the key 'parameters'. Currently the 4th column is the
-        Z (m) information at each pixel, should update this to be more
-        general in case the fixed/experimental parameters are not the
-        same for other Nanonis users.
+        The data is already extracted, though it lives in the signals dict under
+        the key 'parameters'. Currently the 4th column is the Z (m) information
+        at each pixel, should update this to be more general in case the
+        fixed/experimental parameters are not the same for other Nanonis users.
 
-        Returns
-        -------
-        numpy.ndarray
-            Copy of already extracted data to be more easily accessible
-            in signals dict.
+        Returns: numpy.ndarray: Slice of params array in signals dict
+            representing topographic (Z) data.
         """
         return self.signals["params"][:, :, 4]
 
@@ -315,25 +287,18 @@ class Scan(NanonisFile):
     Currently cannot take scans that do not have both directions
     recorded for each channel, nor incomplete scans.
 
-    Parameters
-    ----------
-    fname : str
-        Filename for scan file.
+    Args:
+        fname (str): Filename for scan file.
 
-    Attributes
-    ----------
-    header : dict
-        Parsed sxm header. Some fields are converted to float,
-        otherwise most are string values.
-    signals : dict
-        Dict keys correspond to channel name, values correspond to
-        another dict whose keys are simply forward and backward arrays
-        for the scan image.
+    Attributes:
+        header (dict): Parsed sxm header. Some fields are converted to float,
+            otherwise most are string values.
+        signals (dict): Dict keys correspond to channel name, values correspond
+            to another (dict) whose keys are simply forward and backward arrays for
+            the scan image.
 
-    Raises
-    ------
-    UnhandledFileError
-        If fname does not have a '.sxm' extension.
+    Raises:
+        UnhandledFileError: If fname does not have a '.sxm' extension.
     """
 
     def __init__(self, fname, data_format=None):
@@ -352,10 +317,8 @@ class Scan(NanonisFile):
         """
         Read binary data for Nanonis sxm file.
 
-        Returns
-        -------
-        dict
-            Channel name keyed dict of each channel array.
+        Returns:
+            dict: Channel name keyed dict of each channel array.
         """
         channs = list(self.header["data_info"]["Name"])
         nchanns = len(channs)
@@ -398,20 +361,14 @@ class Spec(NanonisFile):
     These files are a little easier to handle since they are stored in
     ascii format.
 
-    Parameters
-    ----------
-    fname : str
-        Filename for spec file.
+    Args:
+        fname (str): Filename for spec file.
 
-    Attributes
-    ----------
-    header : dict
-        Parsed dat header.
+    Attributes:
+        header (dict): Parsed dat header.
 
-    Raises
-    ------
-    UnhandledFileError
-        If fname does not have a '.dat' extension.
+    Raises:
+        UnhandledFileError: If fname does not have a '.dat' extension.
     """
 
     def __init__(self, fname):
@@ -426,11 +383,9 @@ class Spec(NanonisFile):
 
         Header ended by '[DATA]' tag.
 
-        Returns
-        -------
-        dict
-            Keys correspond to each channel recorded, including
-            saved/filtered versions of other channels.
+        Returns:
+            dict: Keys correspond to each channel recorded, including
+                saved/filtered versions of other channels.
         """
 
         # done differently since data is ascii, not binary
@@ -483,15 +438,11 @@ def _parse_3ds_header(header_raw, header_override):
     Empirically done based on Nanonis header structure. See Grid
     docstring or Nanonis help documentation for more details.
 
-    Parameters
-    ----------
-    header_raw : str
-        Raw header string from read_raw_header() method.
+    Args:
+        header_raw (str): Raw header string from read_raw_header method.
 
-    Returns
-    -------
-    dict
-        Channel name keyed dict of 3d array.
+    Returns:
+        dict: Channel name keyed dict of 3d array.
     """
     # cleanup string and remove end tag as entry
     header_entries = header_raw.split("\r\n")
@@ -602,15 +553,11 @@ def _parse_sxm_header(header_raw):
     Empirically done based on Nanonis header structure. See Scan
     docstring or Nanonis help documentation for more details.
 
-    Parameters
-    ----------
-    header_raw : str
-        Raw header string from read_raw_header() method.
+    Args:
+        header_raw (str): Raw header string from read_raw_header() method.
 
-    Returns
-    -------
-    dict
-        Channel name keyed dict of each channel array.
+    Returns:
+        dict: Channel name keyed dict of each channel array.
     """
     header_entries = header_raw.split("\n")
     header_entries = header_entries[:-3]
@@ -664,10 +611,8 @@ def _parse_dat_header(header_raw):
     Each key-value pair is separated by '\t' characters. Values may be
     further delimited by more '\t' characters.
 
-    Returns
-    -------
-    dict
-        Parsed point spectroscopy header.
+    Returns:
+        dict: Parsed point spectroscopy header.
     """
     header_entries = header_raw.split("\r\n")
     header_entries = header_entries[:-3]
@@ -689,15 +634,11 @@ def _clean_sxm_header(header_dict):
     """
     Cleanup header dicitonary key-value pairs.
 
-    Parameters
-    ----------
-    header_dict : dict
-        Should be dict returned from _parse_sxm_header method.
+    Args:
+        header_dict (dict): Should be dict returned from _parse_sxm_header method.
 
-    Returns
-    -------
-    clean_header_dict : dict
-        Cleaned header dictionary.
+    Returns:
+        clean_header_dict (dict): Cleaned header dictionary.
     """
     pass
 
@@ -724,23 +665,17 @@ def save_array(file, arr, allow_pickle=True):
     use in a matplotlib figure generation scripts. See numpy.save
     documentation for details.
 
-    Parameters
-    ----------
-    file : file or str
-        File or filename to which the data is saved.  If file is a file-
-        object, then the filename is unchanged.  If file is a string, a
-        ``.npy`` extension will be appended to the file name if it does
-        not already have one.
-    arr : array_like
-        Array data to be saved.
-    allow_pickle : bool, optional
-        Allow saving object arrays using Python pickles. Reasons for
-        disallowing pickles include security (loading pickled data can
-        execute arbitrary code) and portability (pickled objects may not
-        be loadable on different Python installations, for example if
-        the stored objects require libraries that are not available, and
-        not all pickled data is compatible between Python 2 and Python
-        3). Default: True
+    Args:
+    file (str): File or filename to which the data is saved.  If file is a file-
+        object, then the filename is unchanged.  If file is a string, a ``.npy``
+        extension will be appended to the file name if it does not already have one.
+    arr (array_like): Array data to be saved.
+    allow_pickle (bool, optional): Allow saving object arrays using Python
+        pickles. Reasons for disallowing pickles include security (loading pickled
+        data can execute arbitrary code) and portability (pickled objects may not be
+        loadable on different Python installations, for example if the stored
+        objects require libraries that are not available, and not all pickled data
+        is compatible between Python 2 and Python 3). Default: True
     """
     np.save(file, arr, allow_pickle=allow_pickle)
 
@@ -753,22 +688,18 @@ def load_array(file, allow_pickle=True):
 
     Parameters
     ----------
-    file : file or str
-        The file to read. File-like objects must support the
-    ``seek()`` and ``read()`` methods. Pickled files require that the
-    file-like object support the ``readline()`` method as well.
-    allow_pickle : bool, optional
-        Allow loading pickled object arrays stored in npy files. Reasons
-        for disallowing pickles include security, as loading pickled
-        data can execute arbitrary code. If pickles are disallowed,
-        loading object arrays will fail. Default: True
+    file (str): The file to read. File-like objects must support the ``seek()``
+        and ``read()`` methods. Pickled files require that the file-like object
+        support the ``readline()`` method as well.
+        allow_pickle (bool, optional): Allow loading pickled object arrays
+            stored in npy files. Reasons for disallowing pickles include security,
+            as loading pickled data can execute arbitrary code. If pickles are
+            disallowed, loading object arrays will fail. Default: True
 
-    Returns
-    -------
-    result : array, tuple, dict, etc.
-        Data stored in the file. For ``.npz`` files, the returned
-        instance of NpzFile class must be closed to avoid leaking file
-        descriptors.
+    Returns:
+        (array, tuple, dict): Data stored in the file. For ``.npz`` files, the
+            returned instance of NpzFile class must be closed to avoid leaking file
+            descriptors.
     """
     return np.load(file)
 
