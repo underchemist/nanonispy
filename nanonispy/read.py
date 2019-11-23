@@ -140,7 +140,7 @@ class NanonisFile:
                 self.data_format = nanonis_format_dict[data_format]
             except KeyError as exc:
                 self.data_format = nanonis_format_dict['big endian float 32']
-                wranings.warn('{} is not a valid data format'.format(data_format))
+                warnings.warn('{} is not a valid data format'.format(data_format))
 
 class Grid(NanonisFile):
 
