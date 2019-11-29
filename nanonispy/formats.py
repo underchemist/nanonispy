@@ -1,5 +1,8 @@
 default_op = lambda x: x.strip('"').split(";")
-no_op = lambda x: x.pop() if len(x) == 1 else x
+pop_op = (
+    lambda x: x[0] if len(x) == 1 and isinstance(x, list) else x
+)  # return only element from sequence else sequence
+no_op = lambda x: x
 
 
 def clean_metadata(bytestr):
@@ -15,9 +18,9 @@ metadata_to_dtypes = {
         "Sweep Signal": no_op,
         "Fixed parameters": no_op,
         "Experiment parameters": no_op,
-        "# Parameters (4 byte)": lambda x: int(no_op(x)),
-        "Experiment size (bytes)": lambda x: int(no_op(x)),
-        "Points": lambda x: int(no_op(x)),
+        "# Parameters (4 byte)": lambda x: int(pop_op(x)),
+        "Experiment size (bytes)": lambda x: int(pop_op(x)),
+        "Points": lambda x: int(pop_op(x)),
         "Channels": no_op,
     }
 }
