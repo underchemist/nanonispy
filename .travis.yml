@@ -1,16 +1,8 @@
 language: python
-matrix:
-  include:
-  - name: 3.6 Unit Test
-    python: '3.6'
-  - name: 3.7 Unit Test
-    sudo: required
-    dist: xenial
-    python: '3.7'
-branches:
-  only:
-  - master
-  - develop
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
 install:
 - pip install python-coveralls
 - pip install -r requirements.txt
