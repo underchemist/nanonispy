@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nanonispy"
-version = "1.0.7"
+version = "1.0.8"
 description = "Read Nanonis data files"
 authors = ["Yann-Sebastien Tremblay-Johnston <yanns.tremblay@gmail.com>"]
 license = "MIT"
