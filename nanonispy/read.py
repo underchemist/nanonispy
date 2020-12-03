@@ -601,8 +601,12 @@ def _parse_sxm_header(header_raw):
 
     entries_to_be_inted = ['scan_pixels']
 
+    entries_to_be_dict = [':DATA_INFO:',
+                          ':Z-CONTROLLER:',
+                          ':Multipass-Config:']
+
     for i, entry in enumerate(header_entries):
-        if entry == ':DATA_INFO:' or entry == ':Z-CONTROLLER:':
+        if entry in entries_to_be_dict:
             count = 1
             for j in range(i+1, len(header_entries)):
                 if header_entries[j].startswith(':'):
