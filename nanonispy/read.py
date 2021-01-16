@@ -226,18 +226,18 @@ class Grid(NanonisFile):
         # pixel size in bytes
         exp_size_per_pix = num_param + num_sweep*num_chan
 
-        # reshape from 1d to 3d
-        griddata_shaped = griddata.reshape((ny, nx, exp_size_per_pix))
+        # resize from 1d to 3d
+        griddata.resize((ny, nx, exp_size_per_pix))
 
         # experimental parameters are first num_param of every pixel
-        params = griddata_shaped[:, :, :num_param]
+        params = griddata[:, :, :num_param]
         data_dict['params'] = params
 
         # extract data for each channel
         for i, chann in enumerate(self.header['channels']):
             start_ind = num_param + i * num_sweep
             stop_ind = num_param + (i+1) * num_sweep
-            data_dict[chann] = griddata_shaped[:, :, start_ind:stop_ind]
+            data_dict[chann] = griddata[:, :, start_ind:stop_ind]
 
         return data_dict
 
