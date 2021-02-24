@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2021-02-24
+
+### Changed
+- Avoid read failure of aborted measurements by padding with zeroes.
 ## [1.0.8] - 2020-03-22
 
 ### Fixed
