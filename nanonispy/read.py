@@ -605,6 +605,8 @@ def _parse_sxm_header(header_raw):
                           ':Z-CONTROLLER:',
                           ':Multipass-Config:']
 
+    entries_possibly_multilines = [':COMMENT:']
+
     for i, entry in enumerate(header_entries):
         if entry in entries_to_be_dict:
             count = 1
@@ -614,6 +616,14 @@ def _parse_sxm_header(header_raw):
                 if header_entries[j][0] == '\t':
                     count += 1
             header_dict[entry.strip(':').lower()] = _parse_scan_header_table(header_entries[i+1:i+count])
+            continue
+        if entry in entries_possibly_multilines:
+            multilines_entry = []
+            for j in range(i+1, len(header_entries)):
+                if header_entries[j].startswith(':'):
+                    break
+                multilines_entry.append(header_entries[j])
+            header_dict[entry.strip(':').lower()] = '\n'.join(multilines_entry)
             continue
         if entry.startswith(':'):
             header_dict[entry.strip(':').lower()] = header_entries[i+1].strip()
