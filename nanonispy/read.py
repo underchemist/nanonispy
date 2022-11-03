@@ -362,7 +362,7 @@ class Scan(NanonisFile):
         # extract data for each channel
         for i, chann in enumerate(channs):
             chann_dict = dict(forward=scandata_shaped[i, 0, :, :],
-                              backward=scandata_shaped[i, 1, :, :])
+                              backward=np.fliplr(scandata_shaped[i, 1, :, :]))
             data_dict[chann] = chann_dict
 
         return data_dict
