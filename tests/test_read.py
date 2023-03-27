@@ -319,10 +319,10 @@ class TestScanFile(unittest.TestCase):
                 a = value
                 b = np.fromstring(test_dict[key].strip('[]'), sep=' ')
                 np.testing.assert_almost_equal(a, b)
-            elif isinstance(value, np.float):
+            elif isinstance(value, float):
                 print(key, value)
                 a = value
-                b = np.float(test_dict[key])
+                b = float(test_dict[key])
                 np.testing.assert_almost_equal(a, b)
                 print(key, value)
             else:
