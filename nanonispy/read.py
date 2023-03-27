@@ -257,7 +257,7 @@ class Grid(NanonisFile):
         sweep_start, sweep_end = self.signals['params'][0, 0, :2]
         num_sweep_signal = self.header['num_sweep_signal']
 
-        return np.linspace(sweep_start, sweep_end, num_sweep_signal, dtype=np.float32)
+        return np.linspace(sweep_start, sweep_end, num_sweep_signal, dtype=float)
 
     def _extract_topo(self):
         """
@@ -633,11 +633,11 @@ def _parse_sxm_header(header_raw):
 
     for key in entries_to_be_floated:
         if isinstance(header_dict[key], list):
-            header_dict[key] = np.asarray(header_dict[key], dtype=np.float)
+            header_dict[key] = np.asarray(header_dict[key], dtype=float)
         else:
-            header_dict[key] = np.float(header_dict[key])
+            header_dict[key] = float(header_dict[key])
     for key in entries_to_be_inted:
-        header_dict[key] = np.asarray(header_dict[key], dtype=np.int)
+        header_dict[key] = np.asarray(header_dict[key], dtype=int)
 
     return header_dict
 
